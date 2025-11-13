@@ -1,6 +1,9 @@
 package http
 
-import "context"
+import (
+	"context"
+	"tickets/worker"
+)
 
 type SpreadsheetsAPI interface {
 	AppendRow(ctx context.Context, sheetName string, row []string) error
@@ -11,6 +14,5 @@ type ReceiptsService interface {
 }
 
 type Handler struct {
-	spreadsheetsAPI SpreadsheetsAPI
-	receiptsService ReceiptsService
+	worker *worker.Worker
 }
