@@ -13,6 +13,7 @@ import (
 
 type Service struct {
 	echoRouter *echo.Echo
+	worker     *worker.Worker
 }
 
 func New(
@@ -22,14 +23,14 @@ func New(
 	worker := worker.NewWorker(spreadsheetsAPI, receiptsService)
 	echoRouter := ticketsHttp.NewHttpRouter(worker)
 
-	go worker.Run(context.Background())
-
 	return Service{
 		echoRouter: echoRouter,
+		worker:     worker,
 	}
 }
 
 func (s Service) Run(ctx context.Context) error {
+	go s.worker.Run(ctx)
 	err := s.echoRouter.Start(":8080")
 	if err != nil && !errors.Is(err, stdHTTP.ErrServerClosed) {
 		return err

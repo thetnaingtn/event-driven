@@ -22,9 +22,7 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 		h.worker.Send(worker.Message{
 			Task:     worker.TaskIssueReceipt,
 			TicketID: ticket,
-		})
-
-		h.worker.Send(worker.Message{
+		}, worker.Message{
 			Task:     worker.TaskAppendToTracker,
 			TicketID: ticket,
 		})
