@@ -3,7 +3,7 @@ package http
 import (
 	"context"
 
-	"github.com/ThreeDotsLabs/watermill-redisstream/pkg/redisstream"
+	"github.com/ThreeDotsLabs/watermill/message"
 )
 
 type SpreadsheetsAPI interface {
@@ -15,5 +15,5 @@ type ReceiptsService interface {
 }
 
 type Handler struct {
-	publisher *redisstream.Publisher
+	publisher message.Publisher
 }

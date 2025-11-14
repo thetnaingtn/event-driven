@@ -2,7 +2,6 @@ package message
 
 import (
 	"context"
-	"os"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-redisstream/pkg/redisstream"
@@ -17,18 +16,16 @@ type ReceiptClient interface {
 	IssueReceipt(ctx context.Context, ticket string) error
 }
 
-func Subscribe(ctx context.Context, spreadsheetClient SpreadSheetClient, receiptClient ReceiptClient) error {
-	logger := watermill.NewSlogLogger(nil)
-
-	rdb := redis.NewClient(&redis.Options{
-		Addr: os.Getenv("REDIS_ADDR"),
-	})
-
+func NewHandler(
+	rdb *redis.Client,
+	logger watermill.LoggerAdapter,
+	spreadsheetClient SpreadSheetClient,
+	receiptClient ReceiptClient,
+) error {
 	spreadsheetSub, err := redisstream.NewSubscriber(redisstream.SubscriberConfig{
 		Client:        rdb,
 		ConsumerGroup: "spreadsheet",
 	}, logger)
-
 	if err != nil {
 		return err
 	}
@@ -37,19 +34,18 @@ func Subscribe(ctx context.Context, spreadsheetClient SpreadSheetClient, receipt
 		Client:        rdb,
 		ConsumerGroup: "receipt",
 	}, logger)
-
 	if err != nil {
 		return err
 	}
 
 	go func() {
-		msgs, err := spreadsheetSub.Subscribe(ctx, "append-to-tracker")
+		msgs, err := spreadsheetSub.Subscribe(context.Background(), "append-to-tracker")
 		if err != nil {
 			panic(err)
 		}
 
 		for msg := range msgs {
-			if err := spreadsheetClient.AppendRow(ctx, "tickets-to-print", []string{string(msg.Payload)}); err != nil {
+			if err := spreadsheetClient.AppendRow(msg.Context(), "tickets-to-print", []string{string(msg.Payload)}); err != nil {
 				msg.Nack()
 			} else {
 				msg.Ack()
@@ -58,13 +54,13 @@ func Subscribe(ctx context.Context, spreadsheetClient SpreadSheetClient, receipt
 	}()
 
 	go func() {
-		msgs, err := receiptSub.Subscribe(ctx, "issue-receipt")
+		msgs, err := receiptSub.Subscribe(context.Background(), "issue-receipt")
 		if err != nil {
 			panic(err)
 		}
 
 		for msg := range msgs {
-			if err := receiptClient.IssueReceipt(ctx, string(msg.Payload)); err != nil {
+			if err := receiptClient.IssueReceipt(msg.Context(), string(msg.Payload)); err != nil {
 				msg.Nack()
 			} else {
 				msg.Ack()

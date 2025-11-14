@@ -5,8 +5,9 @@ import (
 	"errors"
 	stdHTTP "net/http"
 
-	"github.com/ThreeDotsLabs/watermill-redisstream/pkg/redisstream"
+	"github.com/ThreeDotsLabs/watermill"
 	"github.com/labstack/echo/v4"
+	"github.com/redis/go-redis/v9"
 
 	ticketsHttp "tickets/http"
 	"tickets/message"
@@ -19,10 +20,18 @@ type Service struct {
 }
 
 func New(
+	rdb *redis.Client,
 	spreadsheetsAPI ticketsHttp.SpreadsheetsAPI,
 	receiptsService ticketsHttp.ReceiptsService,
-	publisher *redisstream.Publisher,
 ) Service {
+	logger := watermill.NewSlogLogger(nil)
+
+	message.NewHandler(rdb, logger, spreadsheetsAPI, receiptsService)
+	publisher, err := message.NewPublisher(rdb, logger)
+	if err != nil {
+		panic(err)
+	}
+
 	echoRouter := ticketsHttp.NewHttpRouter(publisher)
 
 	return Service{
@@ -33,12 +42,7 @@ func New(
 }
 
 func (s Service) Run(ctx context.Context) error {
-	err := message.Subscribe(ctx, s.spreadsheetsApi, s.receiptsService)
-	if err != nil {
-		return err
-	}
-
-	err = s.echoRouter.Start(":8080")
+	err := s.echoRouter.Start(":8080")
 	if err != nil && !errors.Is(err, stdHTTP.ErrServerClosed) {
 		return err
 	}

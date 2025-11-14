@@ -2,12 +2,12 @@ package http
 
 import (
 	libHttp "github.com/ThreeDotsLabs/go-event-driven/v2/common/http"
-	"github.com/ThreeDotsLabs/watermill-redisstream/pkg/redisstream"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/labstack/echo/v4"
 )
 
 func NewHttpRouter(
-	publisher *redisstream.Publisher,
+	publisher message.Publisher,
 ) *echo.Echo {
 	e := libHttp.NewEcho()
 
