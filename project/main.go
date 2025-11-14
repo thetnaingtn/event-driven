@@ -26,10 +26,6 @@ func main() {
 
 	redisClient := message.NewRedisClient(os.Getenv("REDIS_ADDR"))
 
-	if err != nil {
-		panic(err)
-	}
-
 	err = service.New(
 		redisClient,
 		spreadsheetsAPI,
