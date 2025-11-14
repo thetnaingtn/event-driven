@@ -5,33 +5,40 @@ import (
 	"errors"
 	stdHTTP "net/http"
 
+	"github.com/ThreeDotsLabs/watermill-redisstream/pkg/redisstream"
 	"github.com/labstack/echo/v4"
 
 	ticketsHttp "tickets/http"
-	"tickets/worker"
+	"tickets/message"
 )
 
 type Service struct {
-	echoRouter *echo.Echo
-	worker     *worker.Worker
+	echoRouter      *echo.Echo
+	spreadsheetsApi ticketsHttp.SpreadsheetsAPI
+	receiptsService ticketsHttp.ReceiptsService
 }
 
 func New(
 	spreadsheetsAPI ticketsHttp.SpreadsheetsAPI,
 	receiptsService ticketsHttp.ReceiptsService,
+	publisher *redisstream.Publisher,
 ) Service {
-	worker := worker.NewWorker(spreadsheetsAPI, receiptsService)
-	echoRouter := ticketsHttp.NewHttpRouter(worker)
+	echoRouter := ticketsHttp.NewHttpRouter(publisher)
 
 	return Service{
-		echoRouter: echoRouter,
-		worker:     worker,
+		echoRouter:      echoRouter,
+		receiptsService: receiptsService,
+		spreadsheetsApi: spreadsheetsAPI,
 	}
 }
 
 func (s Service) Run(ctx context.Context) error {
-	go s.worker.Run(ctx)
-	err := s.echoRouter.Start(":8080")
+	err := message.Subscribe(ctx, s.spreadsheetsApi, s.receiptsService)
+	if err != nil {
+		return err
+	}
+
+	err = s.echoRouter.Start(":8080")
 	if err != nil && !errors.Is(err, stdHTTP.ErrServerClosed) {
 		return err
 	}
