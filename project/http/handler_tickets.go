@@ -1,6 +1,7 @@
 package http
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -20,8 +21,16 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 	}
 
 	for _, ticket := range request.Tickets {
-		h.publisher.Publish("issue-receipt", message.NewMessage(watermill.NewUUID(), []byte(ticket)))
-		h.publisher.Publish("append-to-tracker", message.NewMessage(watermill.NewUUID(), []byte(ticket)))
+		msg := []byte(ticket)
+		err := h.publisher.Publish("issue-receipt", message.NewMessage(watermill.NewUUID(), msg))
+		if err != nil {
+			slog.With("error", err).Error("Error publishing issue receipt")
+		}
+
+		err = h.publisher.Publish("append-to-tracker", message.NewMessage(watermill.NewUUID(), msg))
+		if err != nil {
+			slog.With("error", err).Error("Error publishing append to tracker")
+		}
 	}
 
 	return c.NoContent(http.StatusOK)

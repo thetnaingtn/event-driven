@@ -14,9 +14,7 @@ import (
 )
 
 type Service struct {
-	echoRouter      *echo.Echo
-	spreadsheetsApi ticketsHttp.SpreadsheetsAPI
-	receiptsService ticketsHttp.ReceiptsService
+	echoRouter *echo.Echo
 }
 
 func New(
@@ -35,9 +33,7 @@ func New(
 	echoRouter := ticketsHttp.NewHttpRouter(publisher)
 
 	return Service{
-		echoRouter:      echoRouter,
-		receiptsService: receiptsService,
-		spreadsheetsApi: spreadsheetsAPI,
+		echoRouter: echoRouter,
 	}
 }
 
