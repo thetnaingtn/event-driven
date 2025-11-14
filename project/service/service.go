@@ -58,11 +58,12 @@ func (s Service) Run(ctx context.Context) error {
 	})
 
 	g.Go(func() error {
+		<-s.router.Running()
 		err := s.echoRouter.Start(":8080")
 		if err != nil && !errors.Is(err, stdHTTP.ErrServerClosed) {
 			return err
 		}
-		return err
+		return nil
 	})
 
 	g.Go(func() error {
