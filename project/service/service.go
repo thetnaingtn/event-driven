@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	stdHTTP "net/http"
-	"os/signal"
 
 	"github.com/ThreeDotsLabs/watermill"
 	wMessage "github.com/ThreeDotsLabs/watermill/message"
@@ -45,9 +44,6 @@ func New(
 }
 
 func (s Service) Run(ctx context.Context) error {
-	ctx, cancel := signal.NotifyContext(ctx)
-	defer cancel()
-
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {

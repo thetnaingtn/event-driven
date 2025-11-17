@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"os/signal"
 
 	"github.com/ThreeDotsLabs/go-event-driven/v2/common/clients"
 	"github.com/ThreeDotsLabs/go-event-driven/v2/common/log"
@@ -15,6 +16,8 @@ import (
 
 func main() {
 	log.Init(slog.LevelInfo)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
 
 	apiClients, err := clients.NewClients(os.Getenv("GATEWAY_ADDR"), nil)
 	if err != nil {
@@ -30,7 +33,7 @@ func main() {
 		redisClient,
 		spreadsheetsAPI,
 		receiptsService,
-	).Run(context.Background())
+	).Run(ctx)
 	if err != nil {
 		panic(err)
 	}
