@@ -1,6 +1,7 @@
 package http
 
 import (
+	"encoding/json"
 	"log/slog"
 	"net/http"
 	"tickets/entity"
@@ -29,13 +30,35 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 	}
 
 	for _, ticket := range request.Tickets {
-		ticketId := ticket.TicketID
-		err := h.publisher.Publish("issue-receipt", message.NewMessage(watermill.NewUUID(), message.Payload(ticketId)))
+		receiptPayload := entity.IssueReceiptPayload{
+			TicketID: ticket.TicketID,
+			Price:    ticket.Price,
+		}
+
+		bytes, err := json.Marshal(receiptPayload)
+		if err != nil {
+			slog.With("error", err).Error("Error marshaling receipt payload")
+			return err
+		}
+
+		err = h.publisher.Publish("issue-receipt", message.NewMessage(watermill.NewUUID(), bytes))
 		if err != nil {
 			slog.With("error", err).Error("Error publishing issue receipt")
 		}
 
-		err = h.publisher.Publish("append-to-tracker", message.NewMessage(watermill.NewUUID(), message.Payload(ticketId)))
+		trackerPayload := entity.AppendToTrackerPayload{
+			TicketID:      ticket.TicketID,
+			CustomerEmail: ticket.CustomerEmail,
+			Price:         ticket.Price,
+		}
+
+		bytes, err = json.Marshal(trackerPayload)
+		if err != nil {
+			slog.With("error", err).Error("Error marshaling tracker payload")
+			return err
+		}
+
+		err = h.publisher.Publish("append-to-tracker", message.NewMessage(watermill.NewUUID(), bytes))
 		if err != nil {
 			slog.With("error", err).Error("Error publishing append to tracker")
 		}

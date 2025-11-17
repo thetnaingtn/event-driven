@@ -2,6 +2,9 @@ package message
 
 import (
 	"context"
+	"encoding/json"
+	"log/slog"
+	"tickets/entity"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-redisstream/pkg/redisstream"
@@ -14,7 +17,7 @@ type SpreadSheetClient interface {
 }
 
 type ReceiptClient interface {
-	IssueReceipt(ctx context.Context, ticket string) error
+	IssueReceipt(ctx context.Context, request entity.IssueReceiptRequest) error
 }
 
 func NewHandler(
@@ -41,17 +44,35 @@ func NewHandler(
 	}
 
 	router.AddConsumerHandler("tracker-handler", "append-to-tracker", appendToTrackerSub, func(msg *message.Message) error {
-		ticket := string(msg.Payload)
+		payload := &entity.AppendToTrackerPayload{}
+		if err := json.Unmarshal(msg.Payload, payload); err != nil {
+			return err
+		}
 
-		if err := spreadsheetClient.AppendRow(msg.Context(), "tickets-to-print", []string{ticket}); err != nil {
+		slog.Info("Appending ticket to tracker")
+
+		if err := spreadsheetClient.AppendRow(msg.Context(), "tickets-to-print", []string{
+			payload.TicketID,
+			payload.CustomerEmail,
+			payload.Price.Amount,
+			payload.Price.Currency,
+		}); err != nil {
 			return err
 		}
 		return nil
 	})
 
 	router.AddConsumerHandler("issue-receipt-handler", "issue-receipt", issueReceiptSub, func(msg *message.Message) error {
-		ticket := string(msg.Payload)
-		if err := receiptClient.IssueReceipt(msg.Context(), ticket); err != nil {
+		var payload entity.IssueReceiptPayload
+		if err := json.Unmarshal(msg.Payload, &payload); err != nil {
+			return err
+		}
+
+		slog.Info("Issuing receipt")
+
+		request := entity.IssueReceiptRequest(payload)
+
+		if err := receiptClient.IssueReceipt(msg.Context(), request); err != nil {
 			return err
 		}
 

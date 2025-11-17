@@ -23,8 +23,8 @@ type Service struct {
 
 func New(
 	rdb *redis.Client,
-	spreadsheetsAPI ticketsHttp.SpreadsheetsAPI,
-	receiptsService ticketsHttp.ReceiptsService,
+	spreadsheetsAPI message.SpreadSheetClient,
+	receiptsService message.ReceiptClient,
 ) Service {
 	logger := watermill.NewSlogLogger(nil)
 	router := wMessage.NewDefaultRouter(logger)
