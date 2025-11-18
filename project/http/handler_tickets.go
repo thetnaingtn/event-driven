@@ -30,38 +30,43 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 	}
 
 	for _, ticket := range request.Tickets {
-		receiptPayload := entity.IssueReceiptPayload{
-			TicketID: ticket.TicketID,
-			Price:    ticket.Price,
+		switch ticket.Status {
+		case "confirmed":
+			bookingConfirmedEvent := entity.TicketBookingConfirmed{
+				Header:        entity.NewMessageHeader(),
+				TicketID:      ticket.TicketID,
+				CustomerEmail: ticket.CustomerEmail,
+				Price:         ticket.Price,
+			}
+
+			jsonPayload, err := json.Marshal(bookingConfirmedEvent)
+			if err != nil {
+				slog.Error("Error when marshaling event")
+				return err
+			}
+
+			slog.Info("Publishing ticket booking confirmed event")
+
+			h.publisher.Publish("TicketBookingConfirmed", message.NewMessage(watermill.NewUUID(), jsonPayload))
+		case "canceled":
+			bookingCanceledEvent := entity.TicketBookingCanceled{
+				Header:        entity.NewMessageHeader(),
+				TicketID:      ticket.TicketID,
+				CustomerEmail: ticket.CustomerEmail,
+				Price:         ticket.Price,
+			}
+
+			jsonPayload, err := json.Marshal(bookingCanceledEvent)
+			if err != nil {
+				slog.Error("Error when marshaling event")
+				return err
+			}
+
+			slog.Info("Publishing ticket booking confirmed event")
+
+			h.publisher.Publish("TicketBookingCanceled", message.NewMessage(watermill.NewUUID(), jsonPayload))
 		}
 
-		bytes, err := json.Marshal(receiptPayload)
-		if err != nil {
-			slog.With("error", err).Error("Error marshaling receipt payload")
-			return err
-		}
-
-		err = h.publisher.Publish("issue-receipt", message.NewMessage(watermill.NewUUID(), bytes))
-		if err != nil {
-			slog.With("error", err).Error("Error publishing issue receipt")
-		}
-
-		trackerPayload := entity.AppendToTrackerPayload{
-			TicketID:      ticket.TicketID,
-			CustomerEmail: ticket.CustomerEmail,
-			Price:         ticket.Price,
-		}
-
-		bytes, err = json.Marshal(trackerPayload)
-		if err != nil {
-			slog.With("error", err).Error("Error marshaling tracker payload")
-			return err
-		}
-
-		err = h.publisher.Publish("append-to-tracker", message.NewMessage(watermill.NewUUID(), bytes))
-		if err != nil {
-			slog.With("error", err).Error("Error publishing append to tracker")
-		}
 	}
 
 	return c.NoContent(http.StatusOK)

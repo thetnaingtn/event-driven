@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log/slog"
 	stdHTTP "net/http"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -14,6 +15,7 @@ import (
 
 	ticketsHttp "tickets/http"
 	"tickets/message"
+	"tickets/message/event"
 )
 
 type Service struct {
@@ -23,13 +25,13 @@ type Service struct {
 
 func New(
 	rdb *redis.Client,
-	spreadsheetsAPI message.SpreadSheetClient,
-	receiptsService message.ReceiptClient,
+	spreadsheetsAPI event.SpreadSheetClient,
+	receiptsService event.ReceiptClient,
 ) Service {
-	logger := watermill.NewSlogLogger(nil)
-	router := wMessage.NewDefaultRouter(logger)
+	logger := watermill.NewSlogLogger(slog.Default())
 
-	message.NewHandler(rdb, logger, router, spreadsheetsAPI, receiptsService)
+	router := message.NewRouter(rdb, logger, spreadsheetsAPI, receiptsService)
+
 	publisher, err := message.NewPublisher(rdb, logger)
 	if err != nil {
 		panic(err)
