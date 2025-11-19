@@ -29,6 +29,8 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 		return err
 	}
 
+	correlationID := c.Request().Header.Get("Correlation-ID")
+
 	for _, ticket := range request.Tickets {
 		switch ticket.Status {
 		case "confirmed":
@@ -46,8 +48,11 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 			}
 
 			slog.Info("Publishing ticket booking confirmed event")
+			msg := message.NewMessage(watermill.NewUUID(), jsonPayload)
 
-			h.publisher.Publish("TicketBookingConfirmed", message.NewMessage(watermill.NewUUID(), jsonPayload))
+			msg.Metadata.Set("correlation_id", correlationID)
+
+			h.publisher.Publish("TicketBookingConfirmed", msg)
 		case "canceled":
 			bookingCanceledEvent := entity.TicketBookingCanceled{
 				Header:        entity.NewMessageHeader(),
@@ -62,9 +67,11 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 				return err
 			}
 
-			slog.Info("Publishing ticket booking confirmed event")
+			slog.Info("Publishing ticket booking canceled event")
+			msg := message.NewMessage(watermill.NewUUID(), jsonPayload)
+			msg.Metadata.Set("correlation_id", correlationID)
 
-			h.publisher.Publish("TicketBookingCanceled", message.NewMessage(watermill.NewUUID(), jsonPayload))
+			h.publisher.Publish("TicketBookingCanceled", msg)
 		}
 
 	}

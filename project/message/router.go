@@ -19,6 +19,7 @@ func NewRouter(
 	receiptClient event.ReceiptClient,
 ) *message.Router {
 	router := message.NewDefaultRouter(logger)
+	useMiddleware(router)
 
 	appendToTrackerSub, err := redisstream.NewSubscriber(redisstream.SubscriberConfig{
 		Client:        rdb,

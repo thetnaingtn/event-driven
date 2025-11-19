@@ -29,7 +29,6 @@ func New(
 	receiptsService event.ReceiptClient,
 ) Service {
 	logger := watermill.NewSlogLogger(slog.Default())
-
 	router := message.NewRouter(rdb, logger, spreadsheetsAPI, receiptsService)
 
 	publisher, err := message.NewPublisher(rdb, logger)
