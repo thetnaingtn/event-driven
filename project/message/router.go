@@ -19,7 +19,7 @@ func NewRouter(
 	receiptClient event.ReceiptClient,
 ) *message.Router {
 	router := message.NewDefaultRouter(logger)
-	useMiddleware(router)
+	useMiddleware(router, logger)
 
 	appendToTrackerSub, err := redisstream.NewSubscriber(redisstream.SubscriberConfig{
 		Client:        rdb,
@@ -56,6 +56,10 @@ func NewRouter(
 			return err
 		}
 
+		if event.Price.Currency == "" {
+			event.Price.Currency = "USD"
+		}
+
 		slog.Info("Appending ticket to tracker")
 
 		if err := handler.AddTracker(msg.Context(), event); err != nil {
@@ -71,6 +75,10 @@ func NewRouter(
 			return err
 		}
 
+		if event.Price.Currency == "" {
+			event.Price.Currency = "USD"
+		}
+
 		slog.Info("Issuing receipt")
 
 		if err := handler.IssueReceipt(msg.Context(), event); err != nil {
@@ -81,6 +89,11 @@ func NewRouter(
 	})
 
 	router.AddConsumerHandler("cancel_ticket", "TicketBookingCanceled", appendToRefundSub, func(msg *message.Message) error {
+		if msg.Metadata.Get("type") != "TicketBookingCanceled" {
+			slog.Error("Invalid message type")
+			return nil
+		}
+
 		var event entity.TicketBookingCanceled
 		if err := json.Unmarshal(msg.Payload, &event); err != nil {
 			return err

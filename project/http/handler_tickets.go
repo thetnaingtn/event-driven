@@ -51,6 +51,7 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 			msg := message.NewMessage(watermill.NewUUID(), jsonPayload)
 
 			msg.Metadata.Set("correlation_id", correlationID)
+			msg.Metadata.Set("type", "TicketBookingConfirmed")
 
 			h.publisher.Publish("TicketBookingConfirmed", msg)
 		case "canceled":
@@ -70,6 +71,7 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 			slog.Info("Publishing ticket booking canceled event")
 			msg := message.NewMessage(watermill.NewUUID(), jsonPayload)
 			msg.Metadata.Set("correlation_id", correlationID)
+			msg.Metadata.Set("type", "TicketBookingCanceled")
 
 			h.publisher.Publish("TicketBookingCanceled", msg)
 		}

@@ -2,16 +2,25 @@ package message
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/ThreeDotsLabs/go-event-driven/v2/common/log"
+	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 )
 
-func useMiddleware(router *message.Router) {
+func useMiddleware(router *message.Router, watermillLogger watermill.LoggerAdapter) {
 	router.AddMiddleware(middleware.Recoverer)
 	router.AddMiddleware(addCorrelationID)
 	router.AddMiddleware(logger)
+	router.AddMiddleware(middleware.Retry{
+		MaxRetries:      10,
+		InitialInterval: time.Millisecond * 100,
+		MaxInterval:     time.Second,
+		Multiplier:      2,
+		Logger:          watermillLogger,
+	}.Middleware)
 }
 
 func addCorrelationID(next message.HandlerFunc) message.HandlerFunc {
@@ -24,7 +33,7 @@ func addCorrelationID(next message.HandlerFunc) message.HandlerFunc {
 }
 
 func logger(next message.HandlerFunc) message.HandlerFunc {
-	return func(msg *message.Message) ([]*message.Message, error) {
+	return func(msg *message.Message) (msgs []*message.Message, err error) {
 		logger := log.FromContext(msg.Context())
 		logger.With(
 			"message_id", msg.UUID,
@@ -32,6 +41,13 @@ func logger(next message.HandlerFunc) message.HandlerFunc {
 			"metadata", msg.Metadata,
 			"handler", message.HandlerNameFromCtx(msg.Context()),
 		).Info("Handling a message")
-		return next(msg)
+
+		msgs, err = next(msg)
+
+		if err != nil {
+			logger.With("error", err, "message_id", msg.UUID).Error("Error while handling a message")
+		}
+
+		return
 	}
 }
