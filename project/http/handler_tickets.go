@@ -1,13 +1,12 @@
 package http
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"tickets/entity"
 
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/go-event-driven/v2/common/log"
+	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/labstack/echo/v4"
 )
 
@@ -29,7 +28,18 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 		return err
 	}
 
-	correlationID := c.Request().Header.Get("Correlation-ID")
+	bus, err := cqrs.NewEventBusWithConfig(log.CorrelationPublisherDecorator{Publisher: h.publisher}, cqrs.EventBusConfig{
+		GeneratePublishTopic: func(geptp cqrs.GenerateEventPublishTopicParams) (string, error) {
+			return geptp.EventName, nil
+		},
+		Marshaler: cqrs.JSONMarshaler{
+			GenerateName: cqrs.StructName,
+		},
+	})
+
+	if err != nil {
+		return err
+	}
 
 	for _, ticket := range request.Tickets {
 		switch ticket.Status {
@@ -41,19 +51,12 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 				Price:         ticket.Price,
 			}
 
-			jsonPayload, err := json.Marshal(bookingConfirmedEvent)
-			if err != nil {
-				slog.Error("Error when marshaling event")
+			slog.Info("Publishing ticket booking confirmed event")
+
+			if err := bus.Publish(c.Request().Context(), bookingConfirmedEvent); err != nil {
 				return err
 			}
 
-			slog.Info("Publishing ticket booking confirmed event")
-			msg := message.NewMessage(watermill.NewUUID(), jsonPayload)
-
-			msg.Metadata.Set("correlation_id", correlationID)
-			msg.Metadata.Set("type", "TicketBookingConfirmed")
-
-			h.publisher.Publish("TicketBookingConfirmed", msg)
 		case "canceled":
 			bookingCanceledEvent := entity.TicketBookingCanceled{
 				Header:        entity.NewMessageHeader(),
@@ -62,18 +65,11 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 				Price:         ticket.Price,
 			}
 
-			jsonPayload, err := json.Marshal(bookingCanceledEvent)
-			if err != nil {
-				slog.Error("Error when marshaling event")
+			slog.Info("Publishing ticket booking canceled event")
+
+			if err := bus.Publish(c.Request().Context(), bookingCanceledEvent); err != nil {
 				return err
 			}
-
-			slog.Info("Publishing ticket booking canceled event")
-			msg := message.NewMessage(watermill.NewUUID(), jsonPayload)
-			msg.Metadata.Set("correlation_id", correlationID)
-			msg.Metadata.Set("type", "TicketBookingCanceled")
-
-			h.publisher.Publish("TicketBookingCanceled", msg)
 		}
 
 	}
