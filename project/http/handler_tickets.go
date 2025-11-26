@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"tickets/entity"
 
-	"github.com/ThreeDotsLabs/go-event-driven/v2/common/log"
-	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/labstack/echo/v4"
 )
 
@@ -28,19 +26,6 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 		return err
 	}
 
-	bus, err := cqrs.NewEventBusWithConfig(log.CorrelationPublisherDecorator{Publisher: h.publisher}, cqrs.EventBusConfig{
-		GeneratePublishTopic: func(geptp cqrs.GenerateEventPublishTopicParams) (string, error) {
-			return geptp.EventName, nil
-		},
-		Marshaler: cqrs.JSONMarshaler{
-			GenerateName: cqrs.StructName,
-		},
-	})
-
-	if err != nil {
-		return err
-	}
-
 	for _, ticket := range request.Tickets {
 		switch ticket.Status {
 		case "confirmed":
@@ -53,7 +38,7 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 
 			slog.Info("Publishing ticket booking confirmed event")
 
-			if err := bus.Publish(c.Request().Context(), bookingConfirmedEvent); err != nil {
+			if err := h.eventBus.Publish(c.Request().Context(), bookingConfirmedEvent); err != nil {
 				return err
 			}
 
@@ -67,7 +52,7 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 
 			slog.Info("Publishing ticket booking canceled event")
 
-			if err := bus.Publish(c.Request().Context(), bookingCanceledEvent); err != nil {
+			if err := h.eventBus.Publish(c.Request().Context(), bookingCanceledEvent); err != nil {
 				return err
 			}
 		}

@@ -6,12 +6,12 @@ import (
 	"tickets/entity"
 )
 
-func (h Handler) AppendToTracker(ctx context.Context, event *entity.TicketBookingConfirmed) error {
+func (h Handler) TicketRefundToSheet(ctx context.Context, event *entity.TicketBookingCanceled) error {
 	if event == nil {
 		return errors.New("empty event received")
 	}
 
-	return h.spreadsheetsAPI.AppendRow(ctx, "tickets-to-print", []string{
+	return h.spreadsheetsAPI.AppendRow(ctx, "tickets-to-refund", []string{
 		event.TicketID,
 		event.CustomerEmail,
 		event.Price.Amount,
