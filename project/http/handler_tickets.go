@@ -61,3 +61,12 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 
 	return c.NoContent(http.StatusOK)
 }
+
+func (h Handler) GetAllTickets(c echo.Context) error {
+	tickets, err := h.ticketRepository.FindAll(c.Request().Context())
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, tickets)
+}

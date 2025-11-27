@@ -48,7 +48,7 @@ func New(
 	}
 
 	eventBus := event.NewBus(publisher)
-	echoRouter := ticketsHttp.NewHttpRouter(eventBus)
+	echoRouter := ticketsHttp.NewHttpRouter(eventBus, ticketRepository)
 
 	return Service{
 		db:         dbConn,
