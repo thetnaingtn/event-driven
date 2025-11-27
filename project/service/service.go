@@ -3,34 +3,40 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	stdHTTP "net/http"
 
 	"github.com/ThreeDotsLabs/watermill"
 	wMessage "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/jmoiron/sqlx"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/labstack/echo/v4"
 	"github.com/redis/go-redis/v9"
 
+	"tickets/db"
 	ticketsHttp "tickets/http"
 	"tickets/message"
 	"tickets/message/event"
 )
 
 type Service struct {
+	db         *sqlx.DB
 	echoRouter *echo.Echo
 	router     *wMessage.Router
 }
 
 func New(
+	dbConn *sqlx.DB,
 	rdb *redis.Client,
 	spreadsheetsAPI event.SpreadSheetClient,
 	receiptsService event.ReceiptClient,
 ) Service {
 	logger := watermill.NewSlogLogger(slog.Default())
 
-	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService)
+	ticketRepository := db.NewTicketRepository(dbConn)
+	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService, ticketRepository)
 
 	eventProcessorConfig := event.NewEventProcessorConfig(rdb, logger)
 
@@ -45,12 +51,17 @@ func New(
 	echoRouter := ticketsHttp.NewHttpRouter(eventBus)
 
 	return Service{
+		db:         dbConn,
 		echoRouter: echoRouter,
 		router:     router,
 	}
 }
 
 func (s Service) Run(ctx context.Context) error {
+	if err := db.InitializeDatabaseSchema(s.db); err != nil {
+		return fmt.Errorf("failed to initialize database schema: %w", err)
+	}
+
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {

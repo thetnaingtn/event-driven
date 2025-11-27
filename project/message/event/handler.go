@@ -13,12 +13,17 @@ type ReceiptClient interface {
 	IssueReceipt(ctx context.Context, request entity.IssueReceiptRequest) error
 }
 
-type Handler struct {
-	spreadsheetsAPI SpreadSheetClient
-	receiptService  ReceiptClient
+type TicketRepository interface {
+	SaveTicket(ctx context.Context, ticket *entity.Ticket) (*entity.Ticket, error)
 }
 
-func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient) Handler {
+type Handler struct {
+	spreadsheetsAPI  SpreadSheetClient
+	receiptService   ReceiptClient
+	ticketRepository TicketRepository
+}
+
+func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient, ticketRepository TicketRepository) Handler {
 	if spreadsheetsAPI == nil {
 		panic("missing spreadsheetsAPI")
 	}
@@ -27,7 +32,8 @@ func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient
 	}
 
 	return Handler{
-		spreadsheetsAPI: spreadsheetsAPI,
-		receiptService:  receiptsService,
+		spreadsheetsAPI:  spreadsheetsAPI,
+		receiptService:   receiptsService,
+		ticketRepository: ticketRepository,
 	}
 }

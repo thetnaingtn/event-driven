@@ -35,6 +35,10 @@ func NewRouter(
 			"IssueReceipt",
 			eventHandler.IssueReceipt,
 		),
+		cqrs.NewEventHandler(
+			"StoreTicketToDB",
+			eventHandler.SaveTicket,
+		),
 	)
 
 	return router
