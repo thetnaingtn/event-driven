@@ -15,6 +15,7 @@ type ReceiptClient interface {
 
 type TicketRepository interface {
 	SaveTicket(ctx context.Context, ticket *entity.Ticket) (*entity.Ticket, error)
+	RemoveTicket(ctx context.Context, id string) error
 }
 
 type Handler struct {

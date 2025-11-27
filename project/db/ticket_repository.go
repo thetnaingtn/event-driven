@@ -35,3 +35,21 @@ func (r *TicketRepository) SaveTicket(ctx context.Context, ticket *entity.Ticket
 
 	return ticket, nil
 }
+
+func (r *TicketRepository) RemoveTicket(ctx context.Context, id string) error {
+	if id == "" {
+		return fmt.Errorf("id is empty")
+	}
+
+	stmt := `
+		DELETE FROM tickets WHERE ticket_id=$1;
+	`
+
+	_, err := r.db.ExecContext(ctx, stmt, id)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

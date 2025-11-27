@@ -39,6 +39,10 @@ func NewRouter(
 			"StoreTicketToDB",
 			eventHandler.SaveTicket,
 		),
+		cqrs.NewEventHandler(
+			"RemoveTicketFromDB",
+			eventHandler.RemoveTicket,
+		),
 	)
 
 	return router
