@@ -25,7 +25,7 @@ func (r *TicketRepository) SaveTicket(ctx context.Context, ticket *entity.Ticket
 
 	stmt := `
 		INSERT INTO tickets(ticket_id, price_amount, price_currency, customer_email) 
-		VALUES (:ticket_id, :price.amount, :price.currency, :customer_email)
+		VALUES (:ticket_id, :price.amount, :price.currency, :customer_email) ON CONFLICT DO NOTHING
 	`
 
 	_, err := r.db.NamedExecContext(ctx, stmt, ticket)

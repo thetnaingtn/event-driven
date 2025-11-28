@@ -11,6 +11,7 @@ require (
 	github.com/labstack/echo/v4 v4.13.4
 	github.com/lib/pq v1.10.9
 	github.com/redis/go-redis/v9 v9.12.1
+	github.com/stretchr/testify v1.11.0
 	golang.org/x/sync v0.14.0
 )
 
