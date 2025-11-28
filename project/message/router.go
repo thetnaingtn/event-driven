@@ -43,6 +43,10 @@ func NewRouter(
 			"RemoveTicketFromDB",
 			eventHandler.RemoveTicket,
 		),
+		cqrs.NewEventHandler(
+			"PrintTicket",
+			eventHandler.PrintTicket,
+		),
 	)
 
 	return router

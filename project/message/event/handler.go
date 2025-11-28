@@ -18,13 +18,18 @@ type TicketRepository interface {
 	RemoveTicket(ctx context.Context, id string) error
 }
 
+type FileAPIClient interface {
+	UploadFile(ctx context.Context, fileName, fileContent string) error
+}
+
 type Handler struct {
 	spreadsheetsAPI  SpreadSheetClient
 	receiptService   ReceiptClient
 	ticketRepository TicketRepository
+	fileAPIClient    FileAPIClient
 }
 
-func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient, ticketRepository TicketRepository) Handler {
+func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient, ticketRepository TicketRepository, fileAPIClient FileAPIClient) Handler {
 	if spreadsheetsAPI == nil {
 		panic("missing spreadsheetsAPI")
 	}
@@ -36,5 +41,6 @@ func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient
 		spreadsheetsAPI:  spreadsheetsAPI,
 		receiptService:   receiptsService,
 		ticketRepository: ticketRepository,
+		fileAPIClient:    fileAPIClient,
 	}
 }

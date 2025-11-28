@@ -32,11 +32,12 @@ func New(
 	rdb *redis.Client,
 	spreadsheetsAPI event.SpreadSheetClient,
 	receiptsService event.ReceiptClient,
+	fileAPIClient event.FileAPIClient,
 ) Service {
 	logger := watermill.NewSlogLogger(slog.Default())
 
 	ticketRepository := db.NewTicketRepository(dbConn)
-	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService, ticketRepository)
+	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService, ticketRepository, fileAPIClient)
 
 	eventProcessorConfig := event.NewEventProcessorConfig(rdb, logger)
 
