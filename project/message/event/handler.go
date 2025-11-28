@@ -3,6 +3,8 @@ package event
 import (
 	"context"
 	"tickets/entity"
+
+	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 )
 
 type SpreadSheetClient interface {
@@ -27,9 +29,10 @@ type Handler struct {
 	receiptService   ReceiptClient
 	ticketRepository TicketRepository
 	fileAPIClient    FileAPIClient
+	eventBus         *cqrs.EventBus
 }
 
-func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient, ticketRepository TicketRepository, fileAPIClient FileAPIClient) Handler {
+func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient, ticketRepository TicketRepository, fileAPIClient FileAPIClient, eventBus *cqrs.EventBus) Handler {
 	if spreadsheetsAPI == nil {
 		panic("missing spreadsheetsAPI")
 	}
@@ -42,5 +45,6 @@ func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient
 		receiptService:   receiptsService,
 		ticketRepository: ticketRepository,
 		fileAPIClient:    fileAPIClient,
+		eventBus:         eventBus,
 	}
 }

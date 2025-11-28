@@ -36,19 +36,20 @@ func New(
 ) Service {
 	logger := watermill.NewSlogLogger(slog.Default())
 
-	ticketRepository := db.NewTicketRepository(dbConn)
-	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService, ticketRepository, fileAPIClient)
-
-	eventProcessorConfig := event.NewEventProcessorConfig(rdb, logger)
-
-	router := message.NewRouter(eventProcessorConfig, logger, eventHandler)
-
 	publisher, err := message.NewPublisher(rdb, logger)
 	if err != nil {
 		panic(err)
 	}
 
 	eventBus := event.NewBus(publisher)
+
+	ticketRepository := db.NewTicketRepository(dbConn)
+	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService, ticketRepository, fileAPIClient, eventBus)
+
+	eventProcessorConfig := event.NewEventProcessorConfig(rdb, logger)
+
+	router := message.NewRouter(eventProcessorConfig, logger, eventHandler)
+
 	echoRouter := ticketsHttp.NewHttpRouter(eventBus, ticketRepository)
 
 	return Service{

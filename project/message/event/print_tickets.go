@@ -11,6 +11,8 @@ import (
 func (h *Handler) PrintTicket(ctx context.Context, event *entity.TicketBookingConfirmed) error {
 	log.FromContext(ctx).Info("Printing ticket")
 
+	fileName := fmt.Sprintf("%s-ticket.html", event.TicketID)
+
 	ticketHTML := `
 		<html>
 			<head>
@@ -23,9 +25,19 @@ func (h *Handler) PrintTicket(ctx context.Context, event *entity.TicketBookingCo
 		</html>
 `
 
-	err := h.fileAPIClient.UploadFile(ctx, fmt.Sprintf("%s-ticket.html", event.TicketID), ticketHTML)
+	err := h.fileAPIClient.UploadFile(ctx, fileName, ticketHTML)
 	if err != nil {
 		return fmt.Errorf("failed to upload ticket file: %w", err)
+	}
+
+	ticketPrinted := entity.TicketPrinted{
+		Header:   entity.NewMessageHeader(),
+		TicketID: event.TicketID,
+		FileName: fileName,
+	}
+
+	if err := h.eventBus.Publish(ctx, ticketPrinted); err != nil {
+		return fmt.Errorf("failed to publish TicketPrinted event: %w", err)
 	}
 
 	return nil
