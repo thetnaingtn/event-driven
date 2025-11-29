@@ -44,13 +44,15 @@ func New(
 	eventBus := event.NewBus(publisher)
 
 	ticketRepository := db.NewTicketRepository(dbConn)
+	showRepository := db.NewShowRepository(dbConn)
+
 	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService, ticketRepository, fileAPIClient, eventBus)
 
 	eventProcessorConfig := event.NewEventProcessorConfig(rdb, logger)
 
 	router := message.NewRouter(eventProcessorConfig, logger, eventHandler)
 
-	echoRouter := ticketsHttp.NewHttpRouter(eventBus, ticketRepository)
+	echoRouter := ticketsHttp.NewHttpRouter(eventBus, ticketRepository, showRepository)
 
 	return Service{
 		db:         dbConn,
