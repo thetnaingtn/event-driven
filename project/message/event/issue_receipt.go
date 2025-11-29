@@ -12,8 +12,10 @@ func (h Handler) IssueReceipt(ctx context.Context, event *entity.TicketBookingCo
 	}
 
 	request := entity.IssueReceiptRequest{
-		TicketID: event.TicketID,
-		Price:    event.Price,
+		TicketID:       event.TicketID,
+		Price:          event.Price,
+		IdempotencyKey: event.Header.IdempotencyKey,
 	}
+
 	return h.receiptService.IssueReceipt(ctx, request)
 }

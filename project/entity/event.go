@@ -7,14 +7,23 @@ import (
 )
 
 type MessageHeader struct {
-	ID          string    `json:"id"`
-	PublishedAt time.Time `json:"published_at"`
+	ID             string    `json:"id"`
+	PublishedAt    time.Time `json:"published_at"`
+	IdempotencyKey *string   `json:"idempotency_key,omitempty"`
 }
 
 func NewMessageHeader() MessageHeader {
 	return MessageHeader{
 		ID:          uuid.New().String(),
 		PublishedAt: time.Now().UTC(),
+	}
+}
+
+func NewMessageHeaderWithIdempotencyKey(idempotencyKey string) MessageHeader {
+	return MessageHeader{
+		ID:             uuid.NewString(),
+		PublishedAt:    time.Now().UTC(),
+		IdempotencyKey: &idempotencyKey,
 	}
 }
 
