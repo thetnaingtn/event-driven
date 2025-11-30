@@ -45,6 +45,7 @@ func New(
 
 	ticketRepository := db.NewTicketRepository(dbConn)
 	showRepository := db.NewShowRepository(dbConn)
+	bookingRepository := db.NewBookingRepository(dbConn)
 
 	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService, ticketRepository, fileAPIClient, eventBus)
 
@@ -52,7 +53,7 @@ func New(
 
 	router := message.NewRouter(eventProcessorConfig, logger, eventHandler)
 
-	echoRouter := ticketsHttp.NewHttpRouter(eventBus, ticketRepository, showRepository)
+	echoRouter := ticketsHttp.NewHttpRouter(eventBus, ticketRepository, showRepository, bookingRepository)
 
 	return Service{
 		db:         dbConn,
