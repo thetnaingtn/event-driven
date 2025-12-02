@@ -19,6 +19,7 @@ import (
 	ticketsHttp "tickets/http"
 	"tickets/message"
 	"tickets/message/event"
+	"tickets/message/outbox"
 )
 
 type Service struct {
@@ -50,8 +51,8 @@ func New(
 	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService, ticketRepository, fileAPIClient, eventBus)
 
 	eventProcessorConfig := event.NewEventProcessorConfig(rdb, logger)
-
-	router := message.NewRouter(eventProcessorConfig, logger, eventHandler)
+	postgresSubscriber := outbox.NewPostgresSubscriber(dbConn, logger)
+	router := message.NewRouter(postgresSubscriber, publisher, eventProcessorConfig, logger, eventHandler)
 
 	echoRouter := ticketsHttp.NewHttpRouter(eventBus, ticketRepository, showRepository, bookingRepository)
 
