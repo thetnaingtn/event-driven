@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"tickets/db"
 	"tickets/entity"
 
 	"github.com/google/uuid"
@@ -28,6 +29,10 @@ func (h *Handler) BookTickets(c echo.Context) error {
 		CustomerEmail:   booking.CustomerEmail,
 		NumberOfTickets: booking.NumberOfTickets,
 	}); err != nil {
+		if err == db.ErrNotEnoughSeats { // port directly import adapter! fix later
+			return c.NoContent(http.StatusBadRequest)
+		}
+
 		return err
 	}
 
