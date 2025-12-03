@@ -30,3 +30,22 @@ func (r *ShowRepository) CreateShow(ctx context.Context, show *entity.Show) erro
 
 	return nil
 }
+
+func (r *ShowRepository) FindByID(ctx context.Context, id string) (*entity.Show, error) {
+	stmt := `
+		SELECT show_id, dead_nation_id, number_of_tickets, start_time, title, venue FROM shows
+		WHERE show_id=$1;
+	`
+
+	res := r.db.QueryRowContext(ctx, stmt, id)
+	if res.Err() != nil {
+		return nil, fmt.Errorf("failed to query show by id: %w", res.Err())
+	}
+
+	var show entity.Show
+	if err := res.Scan(&show.ShowID, &show.DeadNationID, &show.NumberOfTickets, &show.StartTime, &show.Title, &show.Venue); err != nil {
+		return nil, fmt.Errorf("failed to scan show: %w", err)
+	}
+
+	return &show, nil
+}

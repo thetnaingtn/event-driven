@@ -34,6 +34,7 @@ func New(
 	spreadsheetsAPI event.SpreadSheetClient,
 	receiptsService event.ReceiptClient,
 	fileAPIClient event.FileAPIClient,
+	bookingAPIClient event.BookingAPIClient,
 ) Service {
 	logger := watermill.NewSlogLogger(slog.Default())
 
@@ -48,7 +49,7 @@ func New(
 	showRepository := db.NewShowRepository(dbConn)
 	bookingRepository := db.NewBookingRepository(dbConn)
 
-	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService, ticketRepository, fileAPIClient, eventBus)
+	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService, ticketRepository, fileAPIClient, eventBus, bookingAPIClient, showRepository)
 
 	eventProcessorConfig := event.NewEventProcessorConfig(rdb, logger)
 	postgresSubscriber := outbox.NewPostgresSubscriber(dbConn, logger)

@@ -9,31 +9,31 @@ import (
 )
 
 type BookingRequest struct {
-	ShowID          string `json:"show_id"`
-	NumberOfTickets int    `json:"number_of_tickets"`
-	CustomerEmail   string `json:"customer_email"`
+	ShowID          uuid.UUID `json:"show_id"`
+	NumberOfTickets int       `json:"number_of_tickets"`
+	CustomerEmail   string    `json:"customer_email"`
 }
 
 func (h *Handler) BookTickets(c echo.Context) error {
-	var request BookingRequest
-	if err := c.Bind(&request); err != nil {
+	booking := &BookingRequest{}
+	if err := c.Bind(booking); err != nil {
 		return err
 	}
 
-	booking := &entity.Booking{
-		BookingID:       uuid.NewString(),
-		ShowID:          request.ShowID,
-		NumberOfTickets: request.NumberOfTickets,
-		CustomerEmail:   request.CustomerEmail,
-	}
+	bookingID := uuid.New()
 
-	if err := h.bookingRepository.CreateBooking(c.Request().Context(), booking); err != nil {
+	if err := h.bookingRepository.CreateBooking(c.Request().Context(), &entity.Booking{
+		BookingID:       bookingID,
+		ShowID:          booking.ShowID,
+		CustomerEmail:   booking.CustomerEmail,
+		NumberOfTickets: booking.NumberOfTickets,
+	}); err != nil {
 		return err
 	}
 
 	return c.JSON(http.StatusCreated, struct {
 		BookingID string `json:"booking_id"`
 	}{
-		BookingID: booking.BookingID,
+		BookingID: bookingID.String(),
 	})
 }

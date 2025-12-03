@@ -24,15 +24,25 @@ type FileAPIClient interface {
 	UploadFile(ctx context.Context, fileName, fileContent string) error
 }
 
+type BookingAPIClient interface {
+	MakeBooking(ctx context.Context, request entity.CreateBookingRequest) error
+}
+
+type ShowRepository interface {
+	FindByID(ctx context.Context, id string) (*entity.Show, error)
+}
+
 type Handler struct {
 	spreadsheetsAPI  SpreadSheetClient
 	receiptService   ReceiptClient
 	ticketRepository TicketRepository
 	fileAPIClient    FileAPIClient
 	eventBus         *cqrs.EventBus
+	bookingAPIClient BookingAPIClient
+	showRepository   ShowRepository
 }
 
-func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient, ticketRepository TicketRepository, fileAPIClient FileAPIClient, eventBus *cqrs.EventBus) Handler {
+func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient, ticketRepository TicketRepository, fileAPIClient FileAPIClient, eventBus *cqrs.EventBus, bookingAPIClient BookingAPIClient, showRepository ShowRepository) Handler {
 	if spreadsheetsAPI == nil {
 		panic("missing spreadsheetsAPI")
 	}
@@ -46,5 +56,7 @@ func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient
 		ticketRepository: ticketRepository,
 		fileAPIClient:    fileAPIClient,
 		eventBus:         eventBus,
+		bookingAPIClient: bookingAPIClient,
+		showRepository:   showRepository,
 	}
 }

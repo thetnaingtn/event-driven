@@ -53,6 +53,10 @@ func NewRouter(
 			"PrintTicket",
 			eventHandler.PrintTicket,
 		),
+		cqrs.NewEventHandler(
+			"CallToDeadNation",
+			eventHandler.CallToDeadNation,
+		),
 	)
 
 	return router
