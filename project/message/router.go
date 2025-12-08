@@ -1,6 +1,7 @@
 package message
 
 import (
+	"tickets/message/command"
 	"tickets/message/event"
 	"tickets/message/outbox"
 
@@ -13,20 +14,26 @@ import (
 func NewRouter(
 	postgresSubscriber *watermillSQL.Subscriber,
 	publisher message.Publisher,
-	config cqrs.EventProcessorConfig,
+	eventProcessorConfig cqrs.EventProcessorConfig,
 	logger watermill.LoggerAdapter,
 	eventHandler event.Handler,
+	commandProcessorConfig cqrs.CommandProcessorConfig,
+	commandHandler command.Handler,
 ) *message.Router {
 	router := message.NewDefaultRouter(logger)
 	useMiddleware(router, logger)
 
-	eventProcessor, err := cqrs.NewEventProcessorWithConfig(router, config)
-
-	outbox.AddForwardHandler(postgresSubscriber, publisher, logger, router)
-
+	eventProcessor, err := cqrs.NewEventProcessorWithConfig(router, eventProcessorConfig)
 	if err != nil {
 		panic(err)
 	}
+
+	commandProcessor, err := cqrs.NewCommandProcessorWithConfig(router, commandProcessorConfig)
+	if err != nil {
+		panic(err)
+	}
+
+	outbox.AddForwardHandler(postgresSubscriber, publisher, logger, router)
 
 	eventProcessor.AddHandlers(
 		cqrs.NewEventHandler(
@@ -57,6 +64,10 @@ func NewRouter(
 			"CallToDeadNation",
 			eventHandler.CallToDeadNation,
 		),
+	)
+
+	commandProcessor.AddHandlers(
+		cqrs.NewCommandHandler("RefundTicket", commandHandler.VoidReceipt),
 	)
 
 	return router

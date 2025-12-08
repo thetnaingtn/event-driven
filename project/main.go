@@ -46,9 +46,9 @@ func main() {
 		db,
 		redisClient,
 		spreadsheetsAPI,
-		receiptsService,
 		fileAPIClient,
 		bookingAPIClient,
+		receiptsService,
 	).Run(ctx)
 	if err != nil {
 		panic(err)

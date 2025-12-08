@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"tickets/entity"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -86,7 +87,7 @@ func (h Handler) PutTicketRefund(c echo.Context) error {
 
 	if err := h.commandBus.Send(c.Request().Context(), entity.RefundTicket{
 		TicketID: ticketID,
-		Header:   entity.NewMessageHeader(),
+		Header:   entity.NewMessageHeaderWithIdempotencyKey(uuid.NewString()),
 	}); err != nil {
 		return fmt.Errorf("can't publish")
 	}

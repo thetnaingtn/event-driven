@@ -29,13 +29,18 @@ type Service struct {
 	router     *wMessage.Router
 }
 
+type ReceiptService interface {
+	event.ReceiptClient
+	command.ReceiptClient
+}
+
 func New(
 	dbConn *sqlx.DB,
 	rdb *redis.Client,
 	spreadsheetsAPI event.SpreadSheetClient,
-	receiptsService event.ReceiptClient,
 	fileAPIClient event.FileAPIClient,
 	bookingAPIClient event.BookingAPIClient,
+	receiptService ReceiptService,
 ) Service {
 	logger := watermill.NewSlogLogger(slog.Default())
 
@@ -45,17 +50,19 @@ func New(
 	}
 
 	eventBus := event.NewBus(publisher)
-	commandBus := command.NewBus(publisher)
+	commandBus := command.NewBus(publisher, command.NewBusConfig(logger))
 
 	ticketRepository := db.NewTicketRepository(dbConn)
 	showRepository := db.NewShowRepository(dbConn)
 	bookingRepository := db.NewBookingRepository(dbConn)
 
-	eventHandler := event.NewHandler(spreadsheetsAPI, receiptsService, ticketRepository, fileAPIClient, eventBus, bookingAPIClient, showRepository)
+	eventHandler := event.NewHandler(spreadsheetsAPI, receiptService, ticketRepository, fileAPIClient, eventBus, bookingAPIClient, showRepository)
+	commandHandler := command.NewHandler(receiptService)
 
 	eventProcessorConfig := event.NewEventProcessorConfig(rdb, logger)
+	commandProcessorConfig := command.NewProcessorConfig(rdb, logger)
 	postgresSubscriber := outbox.NewPostgresSubscriber(dbConn, logger)
-	router := message.NewRouter(postgresSubscriber, publisher, eventProcessorConfig, logger, eventHandler)
+	router := message.NewRouter(postgresSubscriber, publisher, eventProcessorConfig, logger, eventHandler, commandProcessorConfig, commandHandler)
 
 	echoRouter := ticketsHttp.NewHttpRouter(eventBus, ticketRepository, showRepository, bookingRepository, commandBus)
 
