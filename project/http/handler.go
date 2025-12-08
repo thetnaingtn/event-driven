@@ -24,4 +24,5 @@ type Handler struct {
 	ticketRepository  ticketRepository
 	showRepository    showRepository
 	bookingRepository bookingRepository
+	commandBus        *cqrs.CommandBus
 }

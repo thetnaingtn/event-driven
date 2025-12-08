@@ -1,6 +1,7 @@
 package http
 
 import (
+	"fmt"
 	"log/slog"
 	"net/http"
 	"tickets/entity"
@@ -76,4 +77,19 @@ func (h Handler) GetAllTickets(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, tickets)
+}
+
+func (h Handler) PutTicketRefund(c echo.Context) error {
+	ticketID := c.Param("ticket_id")
+
+	slog.Info("Sending ticket refund command")
+
+	if err := h.commandBus.Send(c.Request().Context(), entity.RefundTicket{
+		TicketID: ticketID,
+		Header:   entity.NewMessageHeader(),
+	}); err != nil {
+		return fmt.Errorf("can't publish")
+	}
+
+	return c.NoContent(http.StatusAccepted)
 }

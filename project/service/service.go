@@ -18,6 +18,7 @@ import (
 	"tickets/db"
 	ticketsHttp "tickets/http"
 	"tickets/message"
+	"tickets/message/command"
 	"tickets/message/event"
 	"tickets/message/outbox"
 )
@@ -44,6 +45,7 @@ func New(
 	}
 
 	eventBus := event.NewBus(publisher)
+	commandBus := command.NewBus(publisher)
 
 	ticketRepository := db.NewTicketRepository(dbConn)
 	showRepository := db.NewShowRepository(dbConn)
@@ -55,7 +57,7 @@ func New(
 	postgresSubscriber := outbox.NewPostgresSubscriber(dbConn, logger)
 	router := message.NewRouter(postgresSubscriber, publisher, eventProcessorConfig, logger, eventHandler)
 
-	echoRouter := ticketsHttp.NewHttpRouter(eventBus, ticketRepository, showRepository, bookingRepository)
+	echoRouter := ticketsHttp.NewHttpRouter(eventBus, ticketRepository, showRepository, bookingRepository, commandBus)
 
 	return Service{
 		db:         dbConn,

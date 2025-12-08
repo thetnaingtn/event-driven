@@ -14,6 +14,7 @@ func NewHttpRouter(
 	ticketRepository ticketRepository,
 	showRepository showRepository,
 	bookingRepository bookingRepository,
+	commandBus *cqrs.CommandBus,
 ) *echo.Echo {
 	e := libHttp.NewEcho()
 
@@ -22,6 +23,7 @@ func NewHttpRouter(
 		ticketRepository:  ticketRepository,
 		showRepository:    showRepository,
 		bookingRepository: bookingRepository,
+		commandBus:        commandBus,
 	}
 
 	e.POST("/tickets-status", handler.PostTicketsConfirmation)
@@ -34,6 +36,7 @@ func NewHttpRouter(
 	e.POST("/shows", handler.CreateShow)
 
 	e.POST("/book-tickets", handler.BookTickets)
+	e.PUT("/ticket-refund/:ticket_id", handler.PutTicketRefund)
 
 	return e
 }
