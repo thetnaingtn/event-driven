@@ -48,7 +48,7 @@ func (c ReceiptsServiceClient) IssueReceipt(ctx context.Context, request entity.
 	}
 }
 
-func (c ReceiptsServiceClient) VoidReceipt(ctx context.Context, req entity.VoidReceiptRequest) error {
+func (c ReceiptsServiceClient) VoidReceipt(ctx context.Context, req entity.RefundTicketRequest) error {
 	_, err := c.clients.Receipts.PutVoidReceiptWithResponse(ctx, receipts.VoidReceiptRequest{
 		IdempotentId: req.IdempotencyKey,
 		Reason:       "customer requested refund",

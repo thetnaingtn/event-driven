@@ -67,7 +67,7 @@ func NewRouter(
 	)
 
 	commandProcessor.AddHandlers(
-		cqrs.NewCommandHandler("RefundTicket", commandHandler.VoidReceipt),
+		cqrs.NewCommandHandler("RefundTicket", commandHandler.RefundTicket),
 	)
 
 	return router
