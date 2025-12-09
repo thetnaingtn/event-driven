@@ -1,6 +1,8 @@
 package event
 
 import (
+	"fmt"
+
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-redisstream/pkg/redisstream"
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
@@ -12,15 +14,19 @@ var marshaler = cqrs.JSONMarshaler{
 	GenerateName: cqrs.StructName,
 }
 
+func getTopicName(eventName string) string {
+	return fmt.Sprintf("events.%s", eventName)
+}
+
 func NewEventProcessorConfig(rdb *redis.Client, logger watermill.LoggerAdapter) cqrs.EventProcessorConfig {
 	return cqrs.EventProcessorConfig{
 		GenerateSubscribeTopic: func(epgstp cqrs.EventProcessorGenerateSubscribeTopicParams) (string, error) {
-			return epgstp.EventName, nil
+			return getTopicName(epgstp.EventName), nil
 		},
 		SubscriberConstructor: func(epscp cqrs.EventProcessorSubscriberConstructorParams) (message.Subscriber, error) {
 			return redisstream.NewSubscriber(redisstream.SubscriberConfig{
 				Client:        rdb,
-				ConsumerGroup: "svc-tickets." + epscp.HandlerName,
+				ConsumerGroup: "events." + epscp.HandlerName,
 			}, logger)
 		},
 		Marshaler: marshaler,

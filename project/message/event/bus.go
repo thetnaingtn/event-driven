@@ -8,7 +8,7 @@ import (
 func NewBus(pub message.Publisher) *cqrs.EventBus {
 	eventBus, err := cqrs.NewEventBusWithConfig(pub, cqrs.EventBusConfig{
 		GeneratePublishTopic: func(geptp cqrs.GenerateEventPublishTopicParams) (string, error) {
-			return geptp.EventName, nil
+			return getTopicName(geptp.EventName), nil
 		},
 		Marshaler: marshaler,
 	})

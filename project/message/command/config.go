@@ -1,6 +1,8 @@
 package command
 
 import (
+	"fmt"
+
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill-redisstream/pkg/redisstream"
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
@@ -14,10 +16,14 @@ var (
 	}
 )
 
+func getTopicName(commandName string) string {
+	return fmt.Sprintf("commands.%s", commandName)
+}
+
 func NewBusConfig(logger watermill.LoggerAdapter) cqrs.CommandBusConfig {
 	return cqrs.CommandBusConfig{
 		GeneratePublishTopic: func(cbgptp cqrs.CommandBusGeneratePublishTopicParams) (string, error) {
-			return cbgptp.CommandName, nil
+			return getTopicName(cbgptp.CommandName), nil
 		},
 		Marshaler: marshaler,
 		Logger:    logger,
@@ -29,11 +35,11 @@ func NewProcessorConfig(rdb *redis.Client, logger watermill.LoggerAdapter) cqrs.
 		SubscriberConstructor: func(cpscp cqrs.CommandProcessorSubscriberConstructorParams) (message.Subscriber, error) {
 			return redisstream.NewSubscriber(redisstream.SubscriberConfig{
 				Client:        rdb,
-				ConsumerGroup: "svc.tickets." + cpscp.HandlerName,
+				ConsumerGroup: "commands." + cpscp.HandlerName,
 			}, logger)
 		},
 		GenerateSubscribeTopic: func(cpgstp cqrs.CommandProcessorGenerateSubscribeTopicParams) (string, error) {
-			return cpgstp.CommandName, nil
+			return getTopicName(cpgstp.CommandName), nil
 		},
 		Marshaler: marshaler,
 		Logger:    logger,
