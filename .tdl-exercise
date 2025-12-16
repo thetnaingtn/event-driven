@@ -1,4 +1,4 @@
-exercise_id = "9d15fe41-3296-490f-a6d4-9e06c2a66858"
-directory = "13-read-models/01-read-models"
-is_text_only = true
+exercise_id = "a1db39d5-4d4a-4fc1-acd4-0dd201095a9c"
+directory = "13-read-models/02-building-read-models"
+is_text_only = false
 is_optional = false
