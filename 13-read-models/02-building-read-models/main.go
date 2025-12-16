@@ -70,18 +70,50 @@ func (s *InvoiceReadModelStorage) InvoiceByID(id string) (InvoiceReadModel, bool
 }
 
 func (s *InvoiceReadModelStorage) OnInvoiceIssued(ctx context.Context, event *InvoiceIssued) error {
-	// TODO: implement
-	return fmt.Errorf("not implemented")
+	_, ok := s.InvoiceByID(event.InvoiceID)
+	if ok {
+		return nil
+	}
+
+	invoice := InvoiceReadModel{
+		InvoiceID:    event.InvoiceID,
+		Amount:       event.Amount,
+		CustomerName: event.CustomerName,
+		IssuedAt:     event.IssuedAt,
+	}
+
+	s.invoices[event.InvoiceID] = invoice
+
+	return nil
 }
 
 func (s *InvoiceReadModelStorage) OnInvoicePaymentReceived(ctx context.Context, event *InvoicePaymentReceived) error {
-	// TODO: implement
-	return fmt.Errorf("not implemented")
+	invoice, ok := s.InvoiceByID(event.InvoiceID)
+	if !ok {
+		return fmt.Errorf("no invoice issued")
+	}
+
+	invoice.PaidAmount = invoice.PaidAmount.Add(event.PaidAmount)
+	invoice.FullyPaid = event.FullyPaid
+	invoice.LastPaymentAt = event.PaidAt
+
+	s.invoices[event.InvoiceID] = invoice
+
+	return nil
 }
 
 func (s *InvoiceReadModelStorage) OnInvoiceVoided(ctx context.Context, event *InvoiceVoided) error {
-	// TODO: implement
-	return fmt.Errorf("not implemented")
+	invoice, ok := s.InvoiceByID(event.InvoiceID)
+	if !ok {
+		return fmt.Errorf("no invoice issued")
+	}
+
+	invoice.Voided = true
+	invoice.VoidedAt = event.VoidedAt
+
+	s.invoices[event.InvoiceID] = invoice
+
+	return nil
 }
 
 func NewRouter(storage *InvoiceReadModelStorage, eventProcessorConfig cqrs.EventProcessorConfig, watermillLogger watermill.LoggerAdapter) (*message.Router, error) {
@@ -93,8 +125,11 @@ func NewRouter(storage *InvoiceReadModelStorage, eventProcessorConfig cqrs.Event
 	}
 
 	err = eventProcessor.AddHandlers(
-	// TODO: add event handlers
+		cqrs.NewEventHandler("InvoiceIssued", storage.OnInvoiceIssued),
+		cqrs.NewEventHandler("InvoicePaymentReceived", storage.OnInvoicePaymentReceived),
+		cqrs.NewEventHandler("InvoiceVoided", storage.OnInvoiceVoided),
 	)
+
 	if err != nil {
 		return nil, fmt.Errorf("could not add event handlers: %w", err)
 	}
