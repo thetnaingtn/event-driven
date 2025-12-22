@@ -2,6 +2,7 @@ package command
 
 import (
 	"context"
+	"fmt"
 	"tickets/entity"
 )
 
@@ -23,6 +24,14 @@ func (h Handler) RefundTicket(ctx context.Context, command *entity.RefundTicket)
 
 	if err != nil {
 		return err
+	}
+
+	err = h.eventBus.Publish(ctx, entity.TicketRefunded{
+		TicketID: command.TicketID,
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to publish TicketRefunded event: %w", err)
 	}
 
 	return nil

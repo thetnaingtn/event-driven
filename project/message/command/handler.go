@@ -3,6 +3,8 @@ package command
 import (
 	"context"
 	"tickets/entity"
+
+	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 )
 
 type ReceiptClient interface {
@@ -16,11 +18,13 @@ type PaymentClient interface {
 type Handler struct {
 	receiptClient ReceiptClient
 	paymentClient PaymentClient
+	eventBus      *cqrs.EventBus
 }
 
-func NewHandler(receiptClient ReceiptClient, paymentClient PaymentClient) Handler {
+func NewHandler(receiptClient ReceiptClient, paymentClient PaymentClient, eventBus *cqrs.EventBus) Handler {
 	return Handler{
 		receiptClient: receiptClient,
 		paymentClient: paymentClient,
+		eventBus:      eventBus,
 	}
 }
