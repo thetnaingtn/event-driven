@@ -19,6 +19,7 @@ type TicketStatusRequest struct {
 	Status        string       `json:"status"`
 	Price         entity.Money `json:"price"`
 	CustomerEmail string       `json:"customer_email"`
+	BookingID     string       `json:"booking_id"`
 }
 
 func (h Handler) PostTicketsConfirmation(c echo.Context) error {
@@ -43,6 +44,7 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 				TicketID:      ticket.TicketID,
 				CustomerEmail: ticket.CustomerEmail,
 				Price:         ticket.Price,
+				BookingID:     ticket.BookingID,
 			}
 
 			slog.Info("Publishing ticket booking confirmed event")
