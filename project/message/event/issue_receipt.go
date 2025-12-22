@@ -17,5 +17,15 @@ func (h Handler) IssueReceipt(ctx context.Context, event *entity.TicketBookingCo
 		IdempotencyKey: event.Header.IdempotencyKey,
 	}
 
-	return h.receiptService.IssueReceipt(ctx, request)
+	resp, err := h.receiptService.IssueReceipt(ctx, request)
+	if err != nil {
+		return err
+	}
+
+	return h.eventBus.Publish(ctx, entity.TicketReceiptIssued{
+		Header:        entity.NewMessageHeaderWithIdempotencyKey(*event.Header.IdempotencyKey),
+		TicketID:      event.TicketID,
+		ReceiptNumber: resp.ReceiptNumber,
+		IssuedAt:      resp.IssuedAt,
+	})
 }

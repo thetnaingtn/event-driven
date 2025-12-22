@@ -12,7 +12,7 @@ type SpreadSheetClient interface {
 }
 
 type ReceiptClient interface {
-	IssueReceipt(ctx context.Context, request entity.IssueReceiptRequest) error
+	IssueReceipt(ctx context.Context, request entity.IssueReceiptRequest) (*entity.IssueReceiptResponse, error)
 }
 
 type TicketRepository interface {
