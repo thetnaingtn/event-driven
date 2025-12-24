@@ -12,3 +12,9 @@ type IssueReceiptResponse struct {
 	ReceiptNumber string    `json:"receipt_number"`
 	IssuedAt      time.Time `json:"issued_at"`
 }
+
+type VoidReceipt struct {
+	TicketID       string
+	Reason         string
+	IdempotencyKey string
+}

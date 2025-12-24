@@ -8,7 +8,7 @@ import (
 )
 
 type ReceiptClient interface {
-	VoidReceipt(ctx context.Context, request entity.RefundTicketRequest) error
+	VoidReceipt(ctx context.Context, request entity.VoidReceipt) error
 }
 
 type PaymentClient interface {

@@ -64,6 +64,26 @@ func NewRouter(
 			"CallToDeadNation",
 			eventHandler.CallToDeadNation,
 		),
+		cqrs.NewEventHandler(
+			"ops_read_model.OnBookingMade",
+			eventHandler.OpsBookingReadModel.OnBookingMade,
+		),
+		cqrs.NewEventHandler(
+			"ops_read_model.OnTicketReceiptIssued",
+			eventHandler.OpsBookingReadModel.OnTicketReceiptIssued,
+		),
+		cqrs.NewEventHandler(
+			"ops_read_model.OnTicketBookingConfirmed",
+			eventHandler.OpsBookingReadModel.OnTicketBookingConfirmed,
+		),
+		cqrs.NewEventHandler(
+			"ops_read_model.OnTicketRefunded",
+			eventHandler.OpsBookingReadModel.OnTicketRefunded,
+		),
+		cqrs.NewEventHandler(
+			"ops_read_model.OnTicketPrinted",
+			eventHandler.OpsBookingReadModel.OnTicketPrinted,
+		),
 	)
 
 	commandProcessor.AddHandlers(

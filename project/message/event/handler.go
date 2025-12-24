@@ -32,17 +32,26 @@ type ShowRepository interface {
 	FindByID(ctx context.Context, id string) (*entity.Show, error)
 }
 
-type Handler struct {
-	spreadsheetsAPI  SpreadSheetClient
-	receiptService   ReceiptClient
-	ticketRepository TicketRepository
-	fileAPIClient    FileAPIClient
-	eventBus         *cqrs.EventBus
-	bookingAPIClient BookingAPIClient
-	showRepository   ShowRepository
+type OpsBookingReadModel interface {
+	OnBookingMade(ctx context.Context, event *entity.BookingMade) error
+	OnTicketReceiptIssued(ctx context.Context, event *entity.TicketReceiptIssued) error
+	OnTicketBookingConfirmed(ctx context.Context, event *entity.TicketBookingConfirmed) error
+	OnTicketRefunded(ctx context.Context, event *entity.TicketRefunded) error
+	OnTicketPrinted(ctx context.Context, event *entity.TicketPrinted) error
 }
 
-func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient, ticketRepository TicketRepository, fileAPIClient FileAPIClient, eventBus *cqrs.EventBus, bookingAPIClient BookingAPIClient, showRepository ShowRepository) Handler {
+type Handler struct {
+	spreadsheetsAPI     SpreadSheetClient
+	receiptService      ReceiptClient
+	ticketRepository    TicketRepository
+	fileAPIClient       FileAPIClient
+	eventBus            *cqrs.EventBus
+	bookingAPIClient    BookingAPIClient
+	showRepository      ShowRepository
+	OpsBookingReadModel OpsBookingReadModel
+}
+
+func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient, ticketRepository TicketRepository, fileAPIClient FileAPIClient, eventBus *cqrs.EventBus, bookingAPIClient BookingAPIClient, showRepository ShowRepository, opsBookingReadModel OpsBookingReadModel) Handler {
 	if spreadsheetsAPI == nil {
 		panic("missing spreadsheetsAPI")
 	}
@@ -51,12 +60,13 @@ func NewHandler(spreadsheetsAPI SpreadSheetClient, receiptsService ReceiptClient
 	}
 
 	return Handler{
-		spreadsheetsAPI:  spreadsheetsAPI,
-		receiptService:   receiptsService,
-		ticketRepository: ticketRepository,
-		fileAPIClient:    fileAPIClient,
-		eventBus:         eventBus,
-		bookingAPIClient: bookingAPIClient,
-		showRepository:   showRepository,
+		spreadsheetsAPI:     spreadsheetsAPI,
+		receiptService:      receiptsService,
+		ticketRepository:    ticketRepository,
+		fileAPIClient:       fileAPIClient,
+		eventBus:            eventBus,
+		bookingAPIClient:    bookingAPIClient,
+		showRepository:      showRepository,
+		OpsBookingReadModel: opsBookingReadModel,
 	}
 }

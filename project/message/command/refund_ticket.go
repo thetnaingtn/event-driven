@@ -8,9 +8,10 @@ import (
 
 func (h Handler) RefundTicket(ctx context.Context, command *entity.RefundTicket) error {
 	var err error
-	err = h.receiptClient.VoidReceipt(ctx, entity.RefundTicketRequest{
-		TicketId:       command.TicketID,
-		IdempotencyKey: command.Header.IdempotencyKey,
+	err = h.receiptClient.VoidReceipt(ctx, entity.VoidReceipt{
+		TicketID:       command.TicketID,
+		IdempotencyKey: *command.Header.IdempotencyKey,
+		Reason:         "ticket refunded",
 	})
 	if err != nil {
 		return err
@@ -19,7 +20,7 @@ func (h Handler) RefundTicket(ctx context.Context, command *entity.RefundTicket)
 	err = h.paymentClient.Refund(ctx, entity.RefundTicketRequest{
 		TicketId:       command.TicketID,
 		IdempotencyKey: command.Header.IdempotencyKey,
-		RefundReason:   "customer requested refund",
+		RefundReason:   "ticket refunded",
 	})
 
 	if err != nil {
@@ -27,6 +28,7 @@ func (h Handler) RefundTicket(ctx context.Context, command *entity.RefundTicket)
 	}
 
 	err = h.eventBus.Publish(ctx, entity.TicketRefunded{
+		Header:   entity.NewMessageHeader(),
 		TicketID: command.TicketID,
 	})
 

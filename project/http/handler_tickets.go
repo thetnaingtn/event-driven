@@ -34,6 +34,8 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 		return c.NoContent(http.StatusBadRequest)
 	}
 
+	fmt.Printf("len of tickets: %d", len(request.Tickets))
+
 	for _, ticket := range request.Tickets {
 		messageHeader := entity.NewMessageHeaderWithIdempotencyKey(idempotencyKey + ticket.TicketID)
 

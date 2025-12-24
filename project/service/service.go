@@ -57,7 +57,9 @@ func New(
 	showRepository := db.NewShowRepository(dbConn)
 	bookingRepository := db.NewBookingRepository(dbConn)
 
-	eventHandler := event.NewHandler(spreadsheetsAPI, receiptService, ticketRepository, fileAPIClient, eventBus, bookingAPIClient, showRepository)
+	opsBookingReadModel := db.NewOpsBookingRepository(dbConn)
+
+	eventHandler := event.NewHandler(spreadsheetsAPI, receiptService, ticketRepository, fileAPIClient, eventBus, bookingAPIClient, showRepository, opsBookingReadModel)
 	commandHandler := command.NewHandler(receiptService, paymentService, eventBus)
 
 	eventProcessorConfig := event.NewEventProcessorConfig(rdb, logger)

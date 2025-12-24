@@ -10,18 +10,15 @@ import (
 )
 
 func updateInTx(ctx context.Context, db *sqlx.DB, isolation sql.IsolationLevel, fn func(ctx context.Context, tx *sqlx.Tx) error) (err error) {
-	tx, err := db.BeginTxx(ctx, &sql.TxOptions{
-		Isolation: isolation,
-	})
-
+	tx, err := db.BeginTxx(ctx, &sql.TxOptions{Isolation: isolation})
 	if err != nil {
-		return fmt.Errorf("failed to start transaction: %w", err)
+		return fmt.Errorf("could not begin transaction: %w", err)
 	}
 
 	defer func() {
 		if err != nil {
 			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				err = errors.Join(rollbackErr)
+				err = errors.Join(err, rollbackErr)
 			}
 			return
 		}
