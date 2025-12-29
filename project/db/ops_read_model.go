@@ -106,6 +106,36 @@ func (r OpsBookingReadModel) OnTicketReceiptIssued(ctx context.Context, issued *
 	)
 }
 
+func (r OpsBookingReadModel) GetReadModelByBookingID(ctx context.Context, bookingID string) (entities.OpsBooking, error) {
+	return r.findReadModelByBookingID(ctx, bookingID, r.db)
+}
+
+func (r OpsBookingReadModel) AllBookings(ctx context.Context) ([]entities.OpsBooking, error) {
+	stmt := `SELECT payload FROM read_model_ops_bookings`
+
+	rows, err := r.db.QueryContext(ctx, stmt)
+	if err != nil {
+		return nil, fmt.Errorf("can't query all bookings: %w", err)
+	}
+
+	var bookings []entities.OpsBooking
+	for rows.Next() {
+		var payload []byte
+		if err := rows.Scan(&payload); err != nil {
+			return nil, fmt.Errorf("can't get payload from booking: %w", err)
+		}
+
+		booking, err := r.unmarshalReadModelFromDB(payload)
+		if err != nil {
+			return nil, err
+		}
+
+		bookings = append(bookings, booking)
+	}
+
+	return bookings, nil
+}
+
 func (r OpsBookingReadModel) createReadModel(
 	ctx context.Context,
 	booking entities.OpsBooking,

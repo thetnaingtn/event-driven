@@ -9,11 +9,12 @@ import (
 )
 
 type Handler struct {
-	eventBus           *cqrs.EventBus
-	commandBus         *cqrs.CommandBus
-	ticketsRepo        TicketsRepository
-	showsRepository    ShowsRepository
-	bookingsRepository BookingsRepository
+	eventBus            *cqrs.EventBus
+	commandBus          *cqrs.CommandBus
+	ticketsRepo         TicketsRepository
+	showsRepository     ShowsRepository
+	bookingsRepository  BookingsRepository
+	opsBookingReadModel OpsBookingReadModel
 }
 
 type TicketsRepository interface {
@@ -22,4 +23,9 @@ type TicketsRepository interface {
 
 type ShowsRepository interface {
 	AddShow(ctx context.Context, show entities.Show) error
+}
+
+type OpsBookingReadModel interface {
+	GetReadModelByBookingID(ctx context.Context, bookingID string) (entities.OpsBooking, error)
+	AllBookings(ctx context.Context) ([]entities.OpsBooking, error)
 }
