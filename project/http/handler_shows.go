@@ -1,28 +1,27 @@
 package http
 
 import (
+	"fmt"
 	"net/http"
-	"tickets/entity"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+
+	"tickets/entities"
 )
 
-func (h Handler) CreateShow(c echo.Context) error {
-	show := &entity.Show{}
-	if err := c.Bind(show); err != nil {
+func (h Handler) PostShows(c echo.Context) error {
+	show := entities.Show{}
+
+	if err := c.Bind(&show); err != nil {
 		return err
 	}
 
 	show.ShowID = uuid.New()
 
-	if err := h.showRepository.CreateShow(c.Request().Context(), show); err != nil {
-		return err
+	if err := h.showsRepository.AddShow(c.Request().Context(), show); err != nil {
+		return fmt.Errorf("failed to add show: %w", err)
 	}
 
-	return c.JSON(http.StatusCreated, struct {
-		ShowID string `json:"show_id"`
-	}{
-		ShowID: show.ShowID.String(),
-	})
+	return c.JSON(http.StatusCreated, show)
 }

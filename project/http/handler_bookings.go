@@ -1,44 +1,56 @@
 package http
 
 import (
+	"context"
+	"fmt"
 	"net/http"
-	"tickets/db"
-	"tickets/entity"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+
+	"tickets/entities"
 )
 
-type BookingRequest struct {
-	ShowID          uuid.UUID `json:"show_id"`
-	NumberOfTickets int       `json:"number_of_tickets"`
-	CustomerEmail   string    `json:"customer_email"`
+type BookingsRepository interface {
+	AddBooking(ctx context.Context, booking entities.Booking) error
 }
 
-func (h *Handler) BookTickets(c echo.Context) error {
-	booking := &BookingRequest{}
-	if err := c.Bind(booking); err != nil {
+type BookTicketRequest struct {
+	CustomerEmail   string    `json:"customer_email"`
+	NumberOfTickets int       `json:"number_of_tickets"`
+	ShowID          uuid.UUID `json:"show_id"`
+}
+
+type BookTicketResponse struct {
+	BookingID uuid.UUID `json:"booking_id"`
+}
+
+func (h Handler) PostBookTickets(c echo.Context) error {
+	req := BookTicketRequest{}
+	if err := c.Bind(&req); err != nil {
 		return err
+	}
+
+	if req.NumberOfTickets < 1 {
+		return echo.NewHTTPError(http.StatusBadRequest, "number of tickets must be greater than 0")
 	}
 
 	bookingID := uuid.New()
 
-	if err := h.bookingRepository.CreateBooking(c.Request().Context(), &entity.Booking{
+	err := h.bookingsRepository.AddBooking(c.Request().Context(), entities.Booking{
 		BookingID:       bookingID,
-		ShowID:          booking.ShowID,
-		CustomerEmail:   booking.CustomerEmail,
-		NumberOfTickets: booking.NumberOfTickets,
-	}); err != nil {
-		if err == db.ErrNotEnoughSeats { // port directly import adapter! fix later
-			return c.NoContent(http.StatusBadRequest)
-		}
-
-		return err
+		CustomerEmail:   req.CustomerEmail,
+		NumberOfTickets: req.NumberOfTickets,
+		ShowID:          req.ShowID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add booking: %w", err)
 	}
 
-	return c.JSON(http.StatusCreated, struct {
-		BookingID string `json:"booking_id"`
-	}{
-		BookingID: bookingID.String(),
-	})
+	return c.JSON(
+		http.StatusCreated,
+		BookTicketResponse{
+			BookingID: bookingID,
+		},
+	)
 }

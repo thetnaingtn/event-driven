@@ -8,19 +8,17 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func NewPublisher(rdb *redis.Client, logger watermill.LoggerAdapter) (message.Publisher, error) {
+func NewRedisPublisher(rdb *redis.Client, watermillLogger watermill.LoggerAdapter) message.Publisher {
 	var pub message.Publisher
 	pub, err := redisstream.NewPublisher(redisstream.PublisherConfig{
 		Client: rdb,
-	}, logger)
-
+	}, watermillLogger)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
+	pub = log.CorrelationPublisherDecorator{pub}
 
-	pub = log.CorrelationPublisherDecorator{Publisher: pub}
-
-	return pub, err
+	return pub
 }
 
 func NewRedisClient(addr string) *redis.Client {

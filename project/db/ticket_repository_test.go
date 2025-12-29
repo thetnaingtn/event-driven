@@ -3,7 +3,7 @@ package db_test
 import (
 	"context"
 	"testing"
-	"tickets/entity"
+	"tickets/entities"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
@@ -12,9 +12,9 @@ import (
 func TestAddTicket(t *testing.T) {
 	ticketId := uuid.New()
 
-	ticket := &entity.Ticket{
+	ticket := entities.Ticket{
 		TicketID: ticketId.String(),
-		Price: entity.Money{
+		Price: entities.Money{
 			Amount:   "2.5",
 			Currency: "USD",
 		},
@@ -22,7 +22,7 @@ func TestAddTicket(t *testing.T) {
 
 	ctx := context.Background()
 
-	_, err := ticketRepository.SaveTicket(ctx, ticket)
+	err := ticketRepository.Add(ctx, ticket)
 
 	assert.Nil(t, err)
 
@@ -32,7 +32,7 @@ func TestAddTicket(t *testing.T) {
 	assert.Len(t, tickets, 1)
 
 	// create ticket with same uuid
-	_, err = ticketRepository.SaveTicket(ctx, ticket)
+	err = ticketRepository.Add(ctx, ticket)
 	assert.Nil(t, err) // shouldn't throw any error just ignore
 
 	tickets, err = ticketRepository.FindAll(ctx)

@@ -3,73 +3,73 @@ package db
 import (
 	"context"
 	"fmt"
-	"tickets/entity"
 
 	"github.com/jmoiron/sqlx"
+
+	"tickets/entities"
 )
 
-type TicketRepository struct {
+type TicketsRepository struct {
 	db *sqlx.DB
 }
 
-func NewTicketRepository(db *sqlx.DB) *TicketRepository {
-	return &TicketRepository{
-		db: db,
+func NewTicketsRepository(db *sqlx.DB) TicketsRepository {
+	if db == nil {
+		panic("db is nil")
 	}
+
+	return TicketsRepository{db: db}
 }
 
-func (r *TicketRepository) SaveTicket(ctx context.Context, ticket *entity.Ticket) (*entity.Ticket, error) {
-	if ticket == nil {
-		return nil, fmt.Errorf("ticket is nil")
-	}
+func (t TicketsRepository) FindAll(ctx context.Context) ([]entities.Ticket, error) {
+	var returnTickets []entities.Ticket
 
-	stmt := `
-		INSERT INTO tickets(ticket_id, price_amount, price_currency, customer_email) 
-		VALUES (:ticket_id, :price.amount, :price.currency, :customer_email) ON CONFLICT DO NOTHING
-	`
-
-	_, err := r.db.NamedExecContext(ctx, stmt, ticket)
+	err := t.db.SelectContext(
+		ctx,
+		&returnTickets, `
+			SELECT 
+				ticket_id,
+				price_amount as "price.amount", 
+				price_currency as "price.currency",
+				customer_email
+			FROM 
+			    tickets
+		`,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to insert ticket: %w", err)
+		return nil, err
 	}
 
-	return ticket, nil
+	return returnTickets, nil
 }
 
-func (r *TicketRepository) RemoveTicket(ctx context.Context, id string) error {
-	if id == "" {
-		return fmt.Errorf("id is empty")
-	}
-
-	stmt := `
-		DELETE FROM tickets WHERE ticket_id=$1;
-	`
-
-	_, err := r.db.ExecContext(ctx, stmt, id)
-
+func (t TicketsRepository) Add(ctx context.Context, ticket entities.Ticket) error {
+	_, err := t.db.NamedExecContext(
+		ctx,
+		`
+		INSERT INTO 
+    		tickets (ticket_id, price_amount, price_currency, customer_email) 
+		VALUES 
+		    (:ticket_id, :price.amount, :price.currency, :customer_email) 
+		ON CONFLICT DO NOTHING`,
+		ticket,
+	)
 	if err != nil {
-		return err
+		return fmt.Errorf("could not save ticket: %w", err)
 	}
 
 	return nil
 }
 
-func (r *TicketRepository) FindAll(ctx context.Context) ([]entity.Ticket, error) {
-	stmt := `
-		SELECT 
-			ticket_id,
-			price_amount as "price.amount",
-			price_currency as "price.currency",
-			customer_email 
-		FROM tickets
-	`
-
-	var tickets []entity.Ticket
-
-	err := r.db.SelectContext(ctx, &tickets, stmt)
+func (t TicketsRepository) Remove(ctx context.Context, ticketID string) error {
+	_, err := t.db.ExecContext(
+		ctx,
+		`DELETE FROM tickets WHERE ticket_id = $1`,
+		ticketID,
+	)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("could not remove ticket: %w", err)
 	}
 
-	return tickets, nil
+	return nil
 }

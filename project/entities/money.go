@@ -1,4 +1,4 @@
-package entity
+package entities
 
 type Money struct {
 	Amount   string `json:"amount"`

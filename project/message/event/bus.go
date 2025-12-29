@@ -1,18 +1,22 @@
 package event
 
 import (
+	"fmt"
+
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/ThreeDotsLabs/watermill/message"
 )
 
 func NewBus(pub message.Publisher) *cqrs.EventBus {
-	eventBus, err := cqrs.NewEventBusWithConfig(pub, cqrs.EventBusConfig{
-		GeneratePublishTopic: func(geptp cqrs.GenerateEventPublishTopicParams) (string, error) {
-			return getTopicName(geptp.EventName), nil
+	eventBus, err := cqrs.NewEventBusWithConfig(
+		pub,
+		cqrs.EventBusConfig{
+			GeneratePublishTopic: func(params cqrs.GenerateEventPublishTopicParams) (string, error) {
+				return fmt.Sprintf("events.%s", params.EventName), nil
+			},
+			Marshaler: marshaler,
 		},
-		Marshaler: marshaler,
-	})
-
+	)
 	if err != nil {
 		panic(err)
 	}

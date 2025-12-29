@@ -10,38 +10,38 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var (
-	marshaler = cqrs.JSONMarshaler{
-		GenerateName: cqrs.StructName,
-	}
-)
-
-func getTopicName(commandName string) string {
-	return fmt.Sprintf("commands.%s", commandName)
-}
-
-func NewBusConfig(logger watermill.LoggerAdapter) cqrs.CommandBusConfig {
-	return cqrs.CommandBusConfig{
-		GeneratePublishTopic: func(cbgptp cqrs.CommandBusGeneratePublishTopicParams) (string, error) {
-			return getTopicName(cbgptp.CommandName), nil
-		},
-		Marshaler: marshaler,
-		Logger:    logger,
-	}
-}
-
-func NewProcessorConfig(rdb *redis.Client, logger watermill.LoggerAdapter) cqrs.CommandProcessorConfig {
+func NewProcessorConfig(
+	redisClient *redis.Client,
+	watermillLogger watermill.LoggerAdapter,
+) cqrs.CommandProcessorConfig {
 	return cqrs.CommandProcessorConfig{
-		SubscriberConstructor: func(cpscp cqrs.CommandProcessorSubscriberConstructorParams) (message.Subscriber, error) {
-			return redisstream.NewSubscriber(redisstream.SubscriberConfig{
-				Client:        rdb,
-				ConsumerGroup: "commands." + cpscp.HandlerName,
-			}, logger)
+		SubscriberConstructor: func(params cqrs.CommandProcessorSubscriberConstructorParams) (message.Subscriber, error) {
+			return redisstream.NewSubscriber(
+				redisstream.SubscriberConfig{
+					Client:        redisClient,
+					ConsumerGroup: "svc-tickets.commands." + params.HandlerName,
+				},
+				watermillLogger,
+			)
 		},
-		GenerateSubscribeTopic: func(cpgstp cqrs.CommandProcessorGenerateSubscribeTopicParams) (string, error) {
-			return getTopicName(cpgstp.CommandName), nil
+		GenerateSubscribeTopic: func(params cqrs.CommandProcessorGenerateSubscribeTopicParams) (string, error) {
+			return fmt.Sprintf("commands.%s", params.CommandName), nil
 		},
-		Marshaler: marshaler,
-		Logger:    logger,
+		Marshaler: cqrs.JSONMarshaler{
+			GenerateName: cqrs.StructName,
+		},
+		Logger: watermillLogger,
+	}
+}
+
+func NewBusConfig(watermillLogger watermill.LoggerAdapter) cqrs.CommandBusConfig {
+	return cqrs.CommandBusConfig{
+		GeneratePublishTopic: func(params cqrs.CommandBusGeneratePublishTopicParams) (string, error) {
+			return fmt.Sprintf("commands.%s", params.CommandName), nil
+		},
+		Marshaler: cqrs.JSONMarshaler{
+			GenerateName: cqrs.StructName,
+		},
+		Logger: watermillLogger,
 	}
 }

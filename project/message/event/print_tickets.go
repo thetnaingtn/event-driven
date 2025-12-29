@@ -3,15 +3,14 @@ package event
 import (
 	"context"
 	"fmt"
-	"tickets/entity"
 
 	"github.com/ThreeDotsLabs/go-event-driven/v2/common/log"
+
+	"tickets/entities"
 )
 
-func (h *Handler) PrintTicket(ctx context.Context, event *entity.TicketBookingConfirmed) error {
+func (h Handler) PrintTicket(ctx context.Context, event *entities.TicketBookingConfirmed) error {
 	log.FromContext(ctx).Info("Printing ticket")
-
-	fileName := fmt.Sprintf("%s-ticket.html", event.TicketID)
 
 	ticketHTML := `
 		<html>
@@ -25,18 +24,19 @@ func (h *Handler) PrintTicket(ctx context.Context, event *entity.TicketBookingCo
 		</html>
 `
 
-	err := h.fileAPIClient.UploadFile(ctx, fileName, ticketHTML)
+	ticketFile := event.TicketID + "-ticket.html"
+
+	err := h.filesAPI.UploadFile(ctx, ticketFile, ticketHTML)
 	if err != nil {
 		return fmt.Errorf("failed to upload ticket file: %w", err)
 	}
 
-	ticketPrinted := entity.TicketPrinted{
-		Header:   entity.NewMessageHeader(),
+	err = h.eventBus.Publish(ctx, entities.TicketPrinted{
+		Header:   entities.NewMessageHeader(),
 		TicketID: event.TicketID,
-		FileName: fileName,
-	}
-
-	if err := h.eventBus.Publish(ctx, ticketPrinted); err != nil {
+		FileName: ticketFile,
+	})
+	if err != nil {
 		return fmt.Errorf("failed to publish TicketPrinted event: %w", err)
 	}
 

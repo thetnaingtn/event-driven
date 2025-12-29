@@ -2,12 +2,12 @@ package http
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
-	"tickets/entity"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
+
+	"tickets/entities"
 )
 
 type TicketsStatusRequest struct {
@@ -15,14 +15,14 @@ type TicketsStatusRequest struct {
 }
 
 type TicketStatusRequest struct {
-	TicketID      string       `json:"ticket_id"`
-	Status        string       `json:"status"`
-	Price         entity.Money `json:"price"`
-	CustomerEmail string       `json:"customer_email"`
-	BookingID     string       `json:"booking_id"`
+	TicketID      string         `json:"ticket_id"`
+	Status        string         `json:"status"`
+	Price         entities.Money `json:"price"`
+	CustomerEmail string         `json:"customer_email"`
+	BookingID     string         `json:"booking_id"`
 }
 
-func (h Handler) PostTicketsConfirmation(c echo.Context) error {
+func (h Handler) PostTicketsStatus(c echo.Context) error {
 	var request TicketsStatusRequest
 	err := c.Bind(&request)
 	if err != nil {
@@ -31,70 +31,62 @@ func (h Handler) PostTicketsConfirmation(c echo.Context) error {
 
 	idempotencyKey := c.Request().Header.Get("Idempotency-Key")
 	if idempotencyKey == "" {
-		return c.NoContent(http.StatusBadRequest)
+		return echo.NewHTTPError(http.StatusBadRequest, "Idempotency-Key header is required")
 	}
 
-	fmt.Printf("len of tickets: %d", len(request.Tickets))
-
 	for _, ticket := range request.Tickets {
-		messageHeader := entity.NewMessageHeaderWithIdempotencyKey(idempotencyKey + ticket.TicketID)
+		if ticket.Status == "confirmed" {
+			event := entities.TicketBookingConfirmed{
+				Header: entities.NewMessageHeaderWithIdempotencyKey(idempotencyKey + ticket.TicketID),
 
-		switch ticket.Status {
-		case "confirmed":
-			bookingConfirmedEvent := entity.TicketBookingConfirmed{
-				Header:        messageHeader,
 				TicketID:      ticket.TicketID,
-				CustomerEmail: ticket.CustomerEmail,
 				Price:         ticket.Price,
+				CustomerEmail: ticket.CustomerEmail,
 				BookingID:     ticket.BookingID,
 			}
 
-			slog.Info("Publishing ticket booking confirmed event")
-
-			if err := h.eventBus.Publish(c.Request().Context(), bookingConfirmedEvent); err != nil {
-				return err
+			if err := h.eventBus.Publish(c.Request().Context(), event); err != nil {
+				return fmt.Errorf("failed to publish TicketBookingConfirmed event: %w", err)
 			}
-
-		case "canceled":
-			bookingCanceledEvent := entity.TicketBookingCanceled{
-				Header:        messageHeader,
+		} else if ticket.Status == "canceled" {
+			event := entities.TicketBookingCanceled{
+				Header:        entities.NewMessageHeaderWithIdempotencyKey(idempotencyKey + ticket.TicketID),
 				TicketID:      ticket.TicketID,
 				CustomerEmail: ticket.CustomerEmail,
 				Price:         ticket.Price,
 			}
 
-			slog.Info("Publishing ticket booking canceled event")
-
-			if err := h.eventBus.Publish(c.Request().Context(), bookingCanceledEvent); err != nil {
-				return err
+			if err := h.eventBus.Publish(c.Request().Context(), event); err != nil {
+				return fmt.Errorf("failed to publish TicketBookingCanceled event: %w", err)
 			}
+		} else {
+			return fmt.Errorf("unknown ticket status: %s", ticket.Status)
 		}
-
 	}
 
 	return c.NoContent(http.StatusOK)
 }
 
-func (h Handler) GetAllTickets(c echo.Context) error {
-	tickets, err := h.ticketRepository.FindAll(c.Request().Context())
-	if err != nil {
-		return err
-	}
-
-	return c.JSON(http.StatusOK, tickets)
-}
-
 func (h Handler) PutTicketRefund(c echo.Context) error {
 	ticketID := c.Param("ticket_id")
 
-	slog.Info("Sending ticket refund command")
-
-	if err := h.commandBus.Send(c.Request().Context(), entity.RefundTicket{
+	cmd := entities.RefundTicket{
+		Header:   entities.NewMessageHeaderWithIdempotencyKey(uuid.NewString()),
 		TicketID: ticketID,
-		Header:   entity.NewMessageHeaderWithIdempotencyKey(uuid.NewString()),
-	}); err != nil {
-		return fmt.Errorf("can't publish")
+	}
+
+	if err := h.commandBus.Send(c.Request().Context(), cmd); err != nil {
+		return fmt.Errorf("failed to send RefundTicket command: %w", err)
 	}
 
 	return c.NoContent(http.StatusAccepted)
+}
+
+func (h Handler) GetTickets(c echo.Context) error {
+	tickets, err := h.ticketsRepo.FindAll(c.Request().Context())
+	if err != nil {
+		return fmt.Errorf("failed to find tickets: %w", err)
+	}
+
+	return c.JSON(http.StatusOK, tickets)
 }

@@ -3,49 +3,51 @@ package db
 import (
 	"context"
 	"fmt"
-	"tickets/entity"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+
+	"tickets/entities"
 )
 
-type ShowRepository struct {
+type ShowsRepository struct {
 	db *sqlx.DB
 }
 
-func NewShowRepository(db *sqlx.DB) *ShowRepository {
-	return &ShowRepository{
-		db: db,
+func NewShowsRepository(db *sqlx.DB) ShowsRepository {
+	if db == nil {
+		panic("db is nil")
 	}
+
+	return ShowsRepository{db: db}
 }
 
-func (r *ShowRepository) CreateShow(ctx context.Context, show *entity.Show) error {
-	stmt := `
-		INSERT INTO shows(show_id, dead_nation_id, number_of_tickets, start_time, title, venue)
-		VALUES (:show_id, :dead_nation_id, :number_of_tickets, :start_time, :title, :venue) ON CONFLICT DO NOTHING
-	`
-	_, err := r.db.NamedExecContext(ctx, stmt, show)
+func (s ShowsRepository) AddShow(ctx context.Context, show entities.Show) error {
+	_, err := s.db.NamedExecContext(ctx, `
+		INSERT INTO 
+		    shows (show_id, dead_nation_id, number_of_tickets, start_time, title, venue) 
+		VALUES (:show_id, :dead_nation_id, :number_of_tickets, :start_time, :title, :venue)
+		`, show)
 	if err != nil {
-		return fmt.Errorf("failed to insert show: %w", err)
+		return fmt.Errorf("could not add show: %w", err)
 	}
 
 	return nil
 }
 
-func (r *ShowRepository) FindByID(ctx context.Context, id string) (*entity.Show, error) {
-	stmt := `
-		SELECT show_id, dead_nation_id, number_of_tickets, start_time, title, venue FROM shows
-		WHERE show_id=$1;
-	`
-
-	res := r.db.QueryRowContext(ctx, stmt, id)
-	if res.Err() != nil {
-		return nil, fmt.Errorf("failed to query show by id: %w", res.Err())
+func (s ShowsRepository) ShowByID(ctx context.Context, showID uuid.UUID) (entities.Show, error) {
+	var show entities.Show
+	err := s.db.GetContext(ctx, &show, `
+		SELECT 
+		    * 
+		FROM 
+		    shows
+		WHERE
+		    show_id = $1
+	`, showID)
+	if err != nil {
+		return entities.Show{}, fmt.Errorf("could not get show: %w", err)
 	}
 
-	var show entity.Show
-	if err := res.Scan(&show.ShowID, &show.DeadNationID, &show.NumberOfTickets, &show.StartTime, &show.Title, &show.Venue); err != nil {
-		return nil, fmt.Errorf("failed to scan show: %w", err)
-	}
-
-	return &show, nil
+	return show, nil
 }

@@ -1,7 +1,6 @@
 package http
 
 import (
-	"log"
 	"net/http"
 
 	libHttp "github.com/ThreeDotsLabs/go-event-driven/v2/common/http"
@@ -11,32 +10,32 @@ import (
 
 func NewHttpRouter(
 	eventBus *cqrs.EventBus,
-	ticketRepository ticketRepository,
-	showRepository showRepository,
-	bookingRepository bookingRepository,
 	commandBus *cqrs.CommandBus,
+	ticketsRepository TicketsRepository,
+	showsRepository ShowsRepository,
+	bookingsRepository BookingsRepository,
 ) *echo.Echo {
 	e := libHttp.NewEcho()
 
-	handler := Handler{
-		eventBus:          eventBus,
-		ticketRepository:  ticketRepository,
-		showRepository:    showRepository,
-		bookingRepository: bookingRepository,
-		commandBus:        commandBus,
-	}
-
-	e.POST("/tickets-status", handler.PostTicketsConfirmation)
 	e.GET("/health", func(c echo.Context) error {
-		log.Println("here")
 		return c.String(http.StatusOK, "ok")
 	})
-	e.GET("/tickets", handler.GetAllTickets)
 
-	e.POST("/shows", handler.CreateShow)
+	handler := Handler{
+		eventBus:           eventBus,
+		commandBus:         commandBus,
+		ticketsRepo:        ticketsRepository,
+		showsRepository:    showsRepository,
+		bookingsRepository: bookingsRepository,
+	}
 
-	e.POST("/book-tickets", handler.BookTickets)
+	e.POST("/tickets-status", handler.PostTicketsStatus)
+
 	e.PUT("/ticket-refund/:ticket_id", handler.PutTicketRefund)
+	e.GET("/tickets", handler.GetTickets)
+	e.POST("/book-tickets", handler.PostBookTickets)
+
+	e.POST("/shows", handler.PostShows)
 
 	return e
 }

@@ -12,23 +12,27 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func NewPublisherForDB(ctx context.Context, tx *sqlx.Tx) (message.Publisher, error) {
+func NewPublisherForDb(ctx context.Context, db *sqlx.Tx) (message.Publisher, error) {
 	var publisher message.Publisher
 
 	logger := watermill.NewSlogLogger(log.FromContext(ctx))
 
-	publisher, err := watermillSQL.NewPublisher(tx, watermillSQL.PublisherConfig{
-		SchemaAdapter: watermillSQL.DefaultPostgreSQLSchema{},
-	}, logger)
-
+	publisher, err := watermillSQL.NewPublisher(
+		db,
+		watermillSQL.PublisherConfig{
+			SchemaAdapter: watermillSQL.DefaultPostgreSQLSchema{},
+		},
+		logger,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create outbox publisher: %w", err)
 	}
+	publisher = log.CorrelationPublisherDecorator{publisher}
 
-	publisher = log.CorrelationPublisherDecorator{Publisher: publisher}
-
-	publisher = forwarder.NewPublisher(publisher, forwarder.PublisherConfig{ForwarderTopic: outboxTopic})
-	publisher = log.CorrelationPublisherDecorator{Publisher: publisher}
+	publisher = forwarder.NewPublisher(publisher, forwarder.PublisherConfig{
+		ForwarderTopic: outboxTopic,
+	})
+	publisher = log.CorrelationPublisherDecorator{publisher}
 
 	return publisher, nil
 }

@@ -10,7 +10,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var ticketRepository *db.TicketRepository
+var ticketRepository db.TicketsRepository
 
 func TestMain(m *testing.M) {
 	dbConn, err := sqlx.Open("postgres", os.Getenv("POSTGRES_URL"))
@@ -22,7 +22,7 @@ func TestMain(m *testing.M) {
 		log.Fatal(err)
 	}
 
-	ticketRepository = db.NewTicketRepository(dbConn)
+	ticketRepository = db.NewTicketsRepository(dbConn)
 
 	exitVal := m.Run()
 	os.Exit(exitVal)

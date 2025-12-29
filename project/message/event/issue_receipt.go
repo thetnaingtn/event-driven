@@ -2,28 +2,29 @@ package event
 
 import (
 	"context"
-	"errors"
-	"tickets/entity"
+	"fmt"
+
+	"github.com/ThreeDotsLabs/go-event-driven/v2/common/log"
+
+	"tickets/entities"
 )
 
-func (h Handler) IssueReceipt(ctx context.Context, event *entity.TicketBookingConfirmed) error {
-	if event == nil {
-		return errors.New("empty event received")
-	}
+func (h Handler) IssueReceipt(ctx context.Context, event *entities.TicketBookingConfirmed) error {
+	log.FromContext(ctx).Info("Issuing receipt")
 
-	request := entity.IssueReceiptRequest{
+	request := entities.IssueReceiptRequest{
 		TicketID:       event.TicketID,
 		Price:          event.Price,
 		IdempotencyKey: event.Header.IdempotencyKey,
 	}
 
-	resp, err := h.receiptService.IssueReceipt(ctx, request)
+	resp, err := h.receiptsService.IssueReceipt(ctx, request)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to issue receipt: %w", err)
 	}
 
-	return h.eventBus.Publish(ctx, entity.TicketReceiptIssued{
-		Header:        entity.NewMessageHeaderWithIdempotencyKey(*event.Header.IdempotencyKey),
+	return h.eventBus.Publish(ctx, entities.TicketReceiptIssued{
+		Header:        entities.NewMessageHeaderWithIdempotencyKey(event.Header.IdempotencyKey),
 		TicketID:      event.TicketID,
 		ReceiptNumber: resp.ReceiptNumber,
 		IssuedAt:      resp.IssuedAt,

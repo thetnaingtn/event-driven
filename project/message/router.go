@@ -1,41 +1,42 @@
 package message
 
 import (
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/components/cqrs"
+	"github.com/ThreeDotsLabs/watermill/message"
+
+	"tickets/db"
 	"tickets/message/command"
 	"tickets/message/event"
 	"tickets/message/outbox"
-
-	"github.com/ThreeDotsLabs/watermill"
-	watermillSQL "github.com/ThreeDotsLabs/watermill-sql/v3/pkg/sql"
-	"github.com/ThreeDotsLabs/watermill/components/cqrs"
-	"github.com/ThreeDotsLabs/watermill/message"
 )
 
-func NewRouter(
-	postgresSubscriber *watermillSQL.Subscriber,
+func NewWatermillRouter(
+	postgresSubscriber message.Subscriber,
 	publisher message.Publisher,
 	eventProcessorConfig cqrs.EventProcessorConfig,
-	logger watermill.LoggerAdapter,
 	eventHandler event.Handler,
 	commandProcessorConfig cqrs.CommandProcessorConfig,
-	commandHandler command.Handler,
+	commandsHandler command.Handler,
+	opsReadModel db.OpsBookingReadModel,
+	watermillLogger watermill.LoggerAdapter,
 ) *message.Router {
-	router := message.NewDefaultRouter(logger)
-	useMiddleware(router, logger)
+	router := message.NewDefaultRouter(watermillLogger)
+
+	useMiddlewares(router, watermillLogger)
+
+	outbox.AddForwarderHandler(postgresSubscriber, publisher, router, watermillLogger)
 
 	eventProcessor, err := cqrs.NewEventProcessorWithConfig(router, eventProcessorConfig)
 	if err != nil {
 		panic(err)
 	}
 
-	commandProcessor, err := cqrs.NewCommandProcessorWithConfig(router, commandProcessorConfig)
-	if err != nil {
-		panic(err)
-	}
-
-	outbox.AddForwardHandler(postgresSubscriber, publisher, logger, router)
-
 	eventProcessor.AddHandlers(
+		cqrs.NewEventHandler(
+			"BookPlaceInDeadNation",
+			eventHandler.BookPlaceInDeadNation,
+		),
 		cqrs.NewEventHandler(
 			"AppendToTracker",
 			eventHandler.AppendToTracker,
@@ -49,45 +50,49 @@ func NewRouter(
 			eventHandler.IssueReceipt,
 		),
 		cqrs.NewEventHandler(
-			"StoreTicketToDB",
-			eventHandler.SaveTicket,
-		),
-		cqrs.NewEventHandler(
-			"RemoveTicketFromDB",
-			eventHandler.RemoveTicket,
-		),
-		cqrs.NewEventHandler(
-			"PrintTicket",
+			"PrintTicketHandler",
 			eventHandler.PrintTicket,
 		),
 		cqrs.NewEventHandler(
-			"CallToDeadNation",
-			eventHandler.CallToDeadNation,
+			"StoreTickets",
+			eventHandler.StoreTickets,
+		),
+		cqrs.NewEventHandler(
+			"RemoveCanceledTicket",
+			eventHandler.RemoveCanceledTicket,
 		),
 		cqrs.NewEventHandler(
 			"ops_read_model.OnBookingMade",
-			eventHandler.OpsBookingReadModel.OnBookingMade,
+			opsReadModel.OnBookingMade,
 		),
 		cqrs.NewEventHandler(
-			"ops_read_model.OnTicketReceiptIssued",
-			eventHandler.OpsBookingReadModel.OnTicketReceiptIssued,
+			"ops_read_model.IssueReceiptHandler",
+			opsReadModel.OnTicketReceiptIssued,
 		),
 		cqrs.NewEventHandler(
 			"ops_read_model.OnTicketBookingConfirmed",
-			eventHandler.OpsBookingReadModel.OnTicketBookingConfirmed,
-		),
-		cqrs.NewEventHandler(
-			"ops_read_model.OnTicketRefunded",
-			eventHandler.OpsBookingReadModel.OnTicketRefunded,
+			opsReadModel.OnTicketBookingConfirmed,
 		),
 		cqrs.NewEventHandler(
 			"ops_read_model.OnTicketPrinted",
-			eventHandler.OpsBookingReadModel.OnTicketPrinted,
+			opsReadModel.OnTicketPrinted,
+		),
+		cqrs.NewEventHandler(
+			"ops_read_model.OnTicketRefunded",
+			opsReadModel.OnTicketRefunded,
 		),
 	)
 
+	commandProcessor, err := cqrs.NewCommandProcessorWithConfig(router, commandProcessorConfig)
+	if err != nil {
+		panic(err)
+	}
+
 	commandProcessor.AddHandlers(
-		cqrs.NewCommandHandler("RefundTicket", commandHandler.RefundTicket),
+		cqrs.NewCommandHandler(
+			"TicketRefund",
+			commandsHandler.RefundTicket,
+		),
 	)
 
 	return router

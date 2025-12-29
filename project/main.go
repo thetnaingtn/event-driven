@@ -19,38 +19,44 @@ import (
 
 func main() {
 	log.Init(slog.LevelInfo)
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	apiClients, err := clients.NewClients(os.Getenv("GATEWAY_ADDR"), func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("Correlation-ID", log.CorrelationIDFromContext(ctx))
-		return nil
-	})
+	apiClients, err := clients.NewClients(
+		os.Getenv("GATEWAY_ADDR"),
+		func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("Correlation-ID", log.CorrelationIDFromContext(ctx))
+			return nil
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
-
-	spreadsheetsAPI := adapters.NewSpreadsheetsAPIClient(apiClients)
-	receiptsService := adapters.NewReceiptsServiceClient(apiClients)
-	fileAPIClient := adapters.NewFileAPIClient(apiClients)
-	bookingAPIClient := adapters.NewBookingAPIClient(apiClients)
-	paymentService := adapters.NewPaymentServiceClient(apiClients)
-
-	redisClient := message.NewRedisClient(os.Getenv("REDIS_ADDR"))
 
 	db, err := sqlx.Open("postgres", os.Getenv("POSTGRES_URL"))
 	if err != nil {
 		panic(err)
 	}
+	defer db.Close()
+
+	redisClient := message.NewRedisClient(os.Getenv("REDIS_ADDR"))
+	defer redisClient.Close()
+
+	deadNationAPI := adapters.NewDeadNationClient(apiClients)
+	spreadsheetsAPI := adapters.NewSpreadsheetsAPIClient(apiClients)
+	receiptsService := adapters.NewReceiptsServiceClient(apiClients)
+	filesAPI := adapters.NewFilesApiClient(apiClients)
+	paymentsService := adapters.NewPaymentsServiceClient(apiClients)
 
 	err = service.New(
 		db,
 		redisClient,
+		deadNationAPI,
 		spreadsheetsAPI,
-		fileAPIClient,
-		bookingAPIClient,
 		receiptsService,
-		paymentService,
+		filesAPI,
+		paymentsService,
 	).Run(ctx)
 	if err != nil {
 		panic(err)

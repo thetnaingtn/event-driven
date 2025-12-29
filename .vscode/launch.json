@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "project: Debug (go run .)",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "cwd": "${workspaceFolder}/project",
+      "program": "${workspaceFolder}/project",
+      "env": {
+        "REDIS_ADDR": "localhost:6379",
+        "GATEWAY_ADDR": "http://localhost:8888",
+        "POSTGRES_URL":"postgres://user:password@localhost:5432/db?sslmode=disable"
+      },
+      "args": []
+    }
+  ]
+}

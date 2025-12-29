@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"tickets/entity"
 
 	"github.com/ThreeDotsLabs/go-event-driven/v2/common/clients"
 	"github.com/ThreeDotsLabs/go-event-driven/v2/common/clients/receipts"
+
+	"tickets/entities"
 )
 
 type ReceiptsServiceClient struct {
@@ -23,44 +24,50 @@ func NewReceiptsServiceClient(clients *clients.Clients) *ReceiptsServiceClient {
 	return &ReceiptsServiceClient{clients: clients}
 }
 
-func (c ReceiptsServiceClient) IssueReceipt(ctx context.Context, request entity.IssueReceiptRequest) (*entity.IssueReceiptResponse, error) {
+func (c ReceiptsServiceClient) IssueReceipt(ctx context.Context, request entities.IssueReceiptRequest) (entities.IssueReceiptResponse, error) {
 	resp, err := c.clients.Receipts.PutReceiptsWithResponse(ctx, receipts.CreateReceipt{
-		TicketId: request.TicketID,
+		IdempotencyKey: &request.IdempotencyKey,
+
 		Price: receipts.Money{
 			MoneyAmount:   request.Price.Amount,
 			MoneyCurrency: request.Price.Currency,
 		},
-		IdempotencyKey: request.IdempotencyKey,
+		TicketId: request.TicketID,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to post receipt: %w", err)
+		return entities.IssueReceiptResponse{}, fmt.Errorf("failed to post receipt: %w", err)
 	}
 
 	switch resp.StatusCode() {
 	case http.StatusOK:
-		return &entity.IssueReceiptResponse{
+		// receipt already exists
+		return entities.IssueReceiptResponse{
 			ReceiptNumber: resp.JSON200.Number,
 			IssuedAt:      resp.JSON200.IssuedAt,
 		}, nil
 	case http.StatusCreated:
-		return &entity.IssueReceiptResponse{
+		// receipt was created
+		return entities.IssueReceiptResponse{
 			ReceiptNumber: resp.JSON201.Number,
 			IssuedAt:      resp.JSON201.IssuedAt,
 		}, nil
 	default:
-		return nil, fmt.Errorf("unexpected status code for POST receipts-api/receipts: %d", resp.StatusCode())
+		return entities.IssueReceiptResponse{}, fmt.Errorf("unexpected status code for POST receipts-api/receipts: %d", resp.StatusCode())
 	}
 }
 
-func (c ReceiptsServiceClient) VoidReceipt(ctx context.Context, req entity.VoidReceipt) error {
-	_, err := c.clients.Receipts.PutVoidReceiptWithResponse(ctx, receipts.VoidReceiptRequest{
-		IdempotentId: &req.IdempotencyKey,
-		Reason:       req.Reason,
-		TicketId:     req.TicketID,
+func (c ReceiptsServiceClient) VoidReceipt(ctx context.Context, request entities.VoidReceipt) error {
+	resp, err := c.clients.Receipts.PutVoidReceiptWithResponse(ctx, receipts.VoidReceiptRequest{
+		Reason:       request.Reason,
+		TicketId:     request.TicketID,
+		IdempotentId: &request.IdempotencyKey,
 	})
-
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to post void receipt: %w", err)
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return fmt.Errorf("unexpected status code for POST receipts-api/receipts/void: %d", resp.StatusCode())
 	}
 
 	return nil

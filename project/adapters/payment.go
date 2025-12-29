@@ -1,36 +1,38 @@
 package adapters
 
 import (
-	"context"
 	"fmt"
 	"net/http"
-	"tickets/entity"
 
 	"github.com/ThreeDotsLabs/go-event-driven/v2/common/clients"
 	"github.com/ThreeDotsLabs/go-event-driven/v2/common/clients/payments"
+	"golang.org/x/net/context"
+
+	"tickets/entities"
 )
 
-type PaymentServiceCliennt struct {
+type PaymentsServiceClient struct {
+	// we are not mocking this client: it's pointless to use interface here
 	clients *clients.Clients
 }
 
-func NewPaymentServiceClient(clients *clients.Clients) PaymentServiceCliennt {
+func NewPaymentsServiceClient(clients *clients.Clients) PaymentsServiceClient {
 	if clients == nil {
-		panic("NewPaymentServiceClient: clients is nil")
+		panic("NewPaymentsServiceClient: clients is nil")
 	}
 
-	return PaymentServiceCliennt{clients: clients}
+	return PaymentsServiceClient{clients: clients}
 }
 
-func (p PaymentServiceCliennt) Refund(ctx context.Context, request entity.RefundTicketRequest) error {
-	resp, err := p.clients.Payments.PutRefundsWithResponse(ctx, payments.PaymentRefundRequest{
-		DeduplicationId:  request.IdempotencyKey,
-		Reason:           request.RefundReason,
-		PaymentReference: request.TicketId,
+func (c PaymentsServiceClient) RefundPayment(ctx context.Context, refundPayment entities.PaymentRefund) error {
+	resp, err := c.clients.Payments.PutRefundsWithResponse(ctx, payments.PaymentRefundRequest{
+		// we are using TicketID as a payment reference
+		PaymentReference: refundPayment.TicketID,
+		Reason:           refundPayment.RefundReason,
+		DeduplicationId:  &refundPayment.IdempotencyKey,
 	})
-
 	if err != nil {
-		return fmt.Errorf("failed to post refund for payment %s: %w", request.TicketId, err)
+		return fmt.Errorf("failed to post refund for payment %s: %w", refundPayment.TicketID, err)
 	}
 
 	if resp.StatusCode() != http.StatusOK {

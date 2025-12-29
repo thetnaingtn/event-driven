@@ -3,10 +3,10 @@ package event
 import (
 	"context"
 	"errors"
-	"tickets/entity"
+	"tickets/entities"
 )
 
-func (h Handler) CancelBooking(ctx context.Context, event *entity.TicketBookingCanceled) error {
+func (h Handler) CancelBooking(ctx context.Context, event *entities.TicketBookingCanceled) error {
 	if event == nil {
 		return errors.New("empty event received")
 	}

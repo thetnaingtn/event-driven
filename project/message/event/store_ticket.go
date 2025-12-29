@@ -2,24 +2,18 @@ package event
 
 import (
 	"context"
-	"errors"
-	"tickets/entity"
+
+	"github.com/ThreeDotsLabs/go-event-driven/v2/common/log"
+
+	"tickets/entities"
 )
 
-func (h *Handler) SaveTicket(ctx context.Context, event *entity.TicketBookingConfirmed) error {
-	if event == nil {
-		return errors.New("empty ticket")
-	}
+func (h Handler) StoreTickets(ctx context.Context, event *entities.TicketBookingConfirmed) error {
+	log.FromContext(ctx).Info("Storing ticket")
 
-	ticket := &entity.Ticket{
+	return h.ticketsRepository.Add(ctx, entities.Ticket{
 		TicketID:      event.TicketID,
 		Price:         event.Price,
 		CustomerEmail: event.CustomerEmail,
-	}
-
-	if _, err := h.ticketRepository.SaveTicket(ctx, ticket); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }

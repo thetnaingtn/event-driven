@@ -4,16 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 	stdHTTP "net/http"
 
+	"github.com/ThreeDotsLabs/go-event-driven/v2/common/log"
 	"github.com/ThreeDotsLabs/watermill"
-	wMessage "github.com/ThreeDotsLabs/watermill/message"
+	watermillMessage "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/jmoiron/sqlx"
-	"golang.org/x/sync/errgroup"
-
 	"github.com/labstack/echo/v4"
+	_ "github.com/lib/pq"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/sync/errgroup"
 
 	"tickets/db"
 	ticketsHttp "tickets/http"
@@ -24,55 +24,81 @@ import (
 )
 
 type Service struct {
-	db         *sqlx.DB
-	echoRouter *echo.Echo
-	router     *wMessage.Router
+	db              *sqlx.DB
+	watermillRouter *watermillMessage.Router
+	echoRouter      *echo.Echo
 }
 
 type ReceiptService interface {
-	event.ReceiptClient
-	command.ReceiptClient
+	event.ReceiptsService
+	command.ReceiptsService
 }
 
 func New(
 	dbConn *sqlx.DB,
-	rdb *redis.Client,
-	spreadsheetsAPI event.SpreadSheetClient,
-	fileAPIClient event.FileAPIClient,
-	bookingAPIClient event.BookingAPIClient,
-	receiptService ReceiptService,
-	paymentService command.PaymentClient,
+	redisClient *redis.Client,
+	deadNationAPI event.DeadNationAPI,
+	spreadsheetsAPI event.SpreadsheetsAPI,
+	receiptsService ReceiptService,
+	filesAPI event.FilesAPI,
+	paymentsService command.PaymentsService,
 ) Service {
-	logger := watermill.NewSlogLogger(slog.Default())
+	ticketsRepo := db.NewTicketsRepository(dbConn)
+	OpsBookingReadModel := db.NewOpsBookingReadModel(dbConn)
+	showsRepo := db.NewShowsRepository(dbConn)
+	bookingsRepository := db.NewBookingsRepository(dbConn)
 
-	publisher, err := message.NewPublisher(rdb, logger)
-	if err != nil {
-		panic(err)
-	}
+	watermillLogger := watermill.NewSlogLogger(log.FromContext(context.Background()))
 
-	eventBus := event.NewBus(publisher)
-	commandBus := command.NewBus(publisher, command.NewBusConfig(logger))
+	redisPublisher := message.NewRedisPublisher(redisClient, watermillLogger)
 
-	ticketRepository := db.NewTicketRepository(dbConn)
-	showRepository := db.NewShowRepository(dbConn)
-	bookingRepository := db.NewBookingRepository(dbConn)
+	eventBus := event.NewBus(redisPublisher)
 
-	opsBookingReadModel := db.NewOpsBookingRepository(dbConn)
+	eventsHandler := event.NewHandler(
+		deadNationAPI,
+		spreadsheetsAPI,
+		receiptsService,
+		filesAPI,
+		ticketsRepo,
+		showsRepo,
+		eventBus,
+	)
 
-	eventHandler := event.NewHandler(spreadsheetsAPI, receiptService, ticketRepository, fileAPIClient, eventBus, bookingAPIClient, showRepository, opsBookingReadModel)
-	commandHandler := command.NewHandler(receiptService, paymentService, eventBus)
+	commandsHandler := command.NewHandler(
+		eventBus,
+		receiptsService,
+		paymentsService,
+	)
 
-	eventProcessorConfig := event.NewEventProcessorConfig(rdb, logger)
-	commandProcessorConfig := command.NewProcessorConfig(rdb, logger)
-	postgresSubscriber := outbox.NewPostgresSubscriber(dbConn, logger)
-	router := message.NewRouter(postgresSubscriber, publisher, eventProcessorConfig, logger, eventHandler, commandProcessorConfig, commandHandler)
+	commandBus := command.NewBus(redisPublisher, command.NewBusConfig(watermillLogger))
 
-	echoRouter := ticketsHttp.NewHttpRouter(eventBus, ticketRepository, showRepository, bookingRepository, commandBus)
+	postgresSubscriber := outbox.NewPostgresSubscriber(dbConn.DB, watermillLogger)
+	eventProcessorConfig := event.NewProcessorConfig(redisClient, watermillLogger)
+	commandProcessorConfig := command.NewProcessorConfig(redisClient, watermillLogger)
+
+	watermillRouter := message.NewWatermillRouter(
+		postgresSubscriber,
+		redisPublisher,
+		eventProcessorConfig,
+		eventsHandler,
+		commandProcessorConfig,
+		commandsHandler,
+		OpsBookingReadModel,
+		watermillLogger,
+	)
+
+	echoRouter := ticketsHttp.NewHttpRouter(
+		eventBus,
+		commandBus,
+		ticketsRepo,
+		showsRepo,
+		bookingsRepository,
+	)
 
 	return Service{
-		db:         dbConn,
-		echoRouter: echoRouter,
-		router:     router,
+		dbConn,
+		watermillRouter,
+		echoRouter,
 	}
 }
 
@@ -81,28 +107,29 @@ func (s Service) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to initialize database schema: %w", err)
 	}
 
-	g, ctx := errgroup.WithContext(ctx)
+	errgrp, ctx := errgroup.WithContext(ctx)
 
-	g.Go(func() error {
-		if err := s.router.Run(ctx); err != nil {
-			return err
-		}
-		return nil
+	errgrp.Go(func() error {
+		return s.watermillRouter.Run(ctx)
 	})
 
-	g.Go(func() error {
-		<-s.router.Running()
+	errgrp.Go(func() error {
+		// we don't want to start HTTP server before Watermill router (so service won't be healthy before it's ready)
+		<-s.watermillRouter.Running()
+
 		err := s.echoRouter.Start(":8080")
+
 		if err != nil && !errors.Is(err, stdHTTP.ErrServerClosed) {
 			return err
 		}
+
 		return nil
 	})
 
-	g.Go(func() error {
+	errgrp.Go(func() error {
 		<-ctx.Done()
-		return s.echoRouter.Shutdown(ctx)
+		return s.echoRouter.Shutdown(context.Background())
 	})
 
-	return g.Wait()
+	return errgrp.Wait()
 }
