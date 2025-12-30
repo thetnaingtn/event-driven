@@ -110,10 +110,26 @@ func (r OpsBookingReadModel) GetReadModelByBookingID(ctx context.Context, bookin
 	return r.findReadModelByBookingID(ctx, bookingID, r.db)
 }
 
-func (r OpsBookingReadModel) AllBookings(ctx context.Context) ([]entities.OpsBooking, error) {
+func (r OpsBookingReadModel) AllBookings(ctx context.Context, filter entities.Filter) ([]entities.OpsBooking, error) {
 	stmt := `SELECT payload FROM read_model_ops_bookings`
 
-	rows, err := r.db.QueryContext(ctx, stmt)
+	args := []any{}
+
+	if filter.ReceiptIssueDate != nil {
+		stmt += ` WHERE booking_id IN (
+					SELECT booking_id FROM (
+						SELECT booking_id, 
+							DATE(jsonb_path_query(payload, '$.tickets.*.receipt_issued_at')::text) as receipt_issued_at 
+						FROM 
+							read_model_ops_bookings
+					) bookings_within_date 
+					WHERE receipt_issued_at = $1
+					)
+			`
+		args = append(args, filter.ReceiptIssueDate)
+	}
+
+	rows, err := r.db.QueryContext(ctx, stmt, args...)
 	if err != nil {
 		return nil, fmt.Errorf("can't query all bookings: %w", err)
 	}

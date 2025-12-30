@@ -27,5 +27,5 @@ type ShowsRepository interface {
 
 type OpsBookingReadModel interface {
 	GetReadModelByBookingID(ctx context.Context, bookingID string) (entities.OpsBooking, error)
-	AllBookings(ctx context.Context) ([]entities.OpsBooking, error)
+	AllBookings(ctx context.Context, filter entities.Filter) ([]entities.OpsBooking, error)
 }

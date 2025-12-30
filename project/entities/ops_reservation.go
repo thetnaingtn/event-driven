@@ -6,6 +6,10 @@ import (
 	"github.com/google/uuid"
 )
 
+type Filter struct {
+	ReceiptIssueDate *time.Time
+}
+
 type OpsBooking struct {
 	BookingID uuid.UUID `json:"booking_id"`
 	BookedAt  time.Time `json:"booked_at"`
