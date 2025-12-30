@@ -1,4 +1,4 @@
-exercise_id = "547c8346-280c-42d4-82bd-10f872b35220"
-directory = "project"
+exercise_id = "4c713b89-f604-461f-824a-d94bb68b4301"
+directory = "14-message-ordering/03-partition-per-entity"
 is_text_only = false
 is_optional = false
