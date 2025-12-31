@@ -24,8 +24,10 @@ type AlertResolved struct {
 }
 
 type AlertUpdated struct {
-	AlertID     string `json:"alert_id"`
-	IsTriggered bool   `json:"is_triggered"`
+	AlertID         string    `json:"alert_id"`
+	IsTriggered     bool      `json:"is_triggered"`
+	LastTriggeredAt time.Time `json:"last_triggered_at"`
+	LastResolvedAt  time.Time `json:"last_resolved_at"`
 }
 
 func main() {
@@ -96,10 +98,12 @@ func main() {
 			alert, ok := alerts[event.AlertID]
 			if !ok {
 				alert = AlertUpdated{
-					AlertID: event.AlertID,
+					AlertID:         event.AlertID,
+					LastTriggeredAt: event.TriggeredAt,
 				}
 			}
 
+			alert.LastTriggeredAt = event.TriggeredAt
 			alert.IsTriggered = true
 			alerts[event.AlertID] = alert
 
@@ -116,6 +120,7 @@ func main() {
 				}
 			}
 
+			alert.LastResolvedAt = event.ResolvedAt
 			alert.IsTriggered = false
 			alerts[event.AlertID] = alert
 
