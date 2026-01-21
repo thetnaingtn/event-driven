@@ -33,7 +33,8 @@ func (t TicketsRepository) FindAll(ctx context.Context) ([]entities.Ticket, erro
 				price_currency as "price.currency",
 				customer_email
 			FROM 
-			    tickets
+				tickets
+			WHERE deleted_at IS NULL
 		`,
 	)
 	if err != nil {
@@ -62,13 +63,22 @@ func (t TicketsRepository) Add(ctx context.Context, ticket entities.Ticket) erro
 }
 
 func (t TicketsRepository) Remove(ctx context.Context, ticketID string) error {
-	_, err := t.db.ExecContext(
+	res, err := t.db.ExecContext(
 		ctx,
-		`DELETE FROM tickets WHERE ticket_id = $1`,
+		`UPDATE tickets SET deleted_at = now() WHERE ticket_id = $1`,
 		ticketID,
 	)
 	if err != nil {
 		return fmt.Errorf("could not remove ticket: %w", err)
+	}
+
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("couldn't get affected rows: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("couldn't get ticket with id: %d", ticketID)
 	}
 
 	return nil
