@@ -51,6 +51,7 @@ func New(
 	watermillLogger := watermill.NewSlogLogger(log.FromContext(context.Background()))
 
 	redisPublisher := message.NewRedisPublisher(redisClient, watermillLogger)
+	redisSubscriber := message.NewRedisSubscriber(redisClient, watermillLogger)
 
 	eventBus := event.NewBus(redisPublisher)
 
@@ -79,6 +80,7 @@ func New(
 	watermillRouter := message.NewWatermillRouter(
 		postgresSubscriber,
 		redisPublisher,
+		redisSubscriber,
 		eventProcessorConfig,
 		eventsHandler,
 		commandProcessorConfig,

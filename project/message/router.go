@@ -1,6 +1,8 @@
 package message
 
 import (
+	"errors"
+
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -13,7 +15,8 @@ import (
 
 func NewWatermillRouter(
 	postgresSubscriber message.Subscriber,
-	publisher message.Publisher,
+	redisPublisher message.Publisher,
+	redisSubscriber message.Subscriber,
 	eventProcessorConfig cqrs.EventProcessorConfig,
 	eventHandler event.Handler,
 	commandProcessorConfig cqrs.CommandProcessorConfig,
@@ -25,12 +28,20 @@ func NewWatermillRouter(
 
 	useMiddlewares(router, watermillLogger)
 
-	outbox.AddForwarderHandler(postgresSubscriber, publisher, router, watermillLogger)
+	outbox.AddForwarderHandler(postgresSubscriber, redisPublisher, router, watermillLogger)
 
 	eventProcessor, err := cqrs.NewEventProcessorWithConfig(router, eventProcessorConfig)
 	if err != nil {
 		panic(err)
 	}
+
+	router.AddConsumerHandler("event_splitter", "events", redisSubscriber, func(msg *message.Message) error {
+		eventName := eventProcessorConfig.Marshaler.NameFromMessage(msg)
+		if eventName == "" {
+			return errors.New("cannot get event name from message")
+		}
+		return redisPublisher.Publish("events."+eventName, msg)
+	})
 
 	eventProcessor.AddHandlers(
 		cqrs.NewEventHandler(
