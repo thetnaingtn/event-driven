@@ -36,7 +36,7 @@ func (h Handler) PostTicketsStatus(c echo.Context) error {
 
 	for _, ticket := range request.Tickets {
 		if ticket.Status == "confirmed" {
-			event := entities.TicketBookingConfirmed{
+			event := entities.TicketBookingConfirmed_v1{
 				Header: entities.NewMessageHeaderWithIdempotencyKey(idempotencyKey + ticket.TicketID),
 
 				TicketID:      ticket.TicketID,
@@ -46,10 +46,10 @@ func (h Handler) PostTicketsStatus(c echo.Context) error {
 			}
 
 			if err := h.eventBus.Publish(c.Request().Context(), event); err != nil {
-				return fmt.Errorf("failed to publish TicketBookingConfirmed event: %w", err)
+				return fmt.Errorf("failed to publish TicketBookingConfirmed_v1 event: %w", err)
 			}
 		} else if ticket.Status == "canceled" {
-			event := entities.TicketBookingCanceled{
+			event := entities.TicketBookingCanceled_v1{
 				Header:        entities.NewMessageHeaderWithIdempotencyKey(idempotencyKey + ticket.TicketID),
 				TicketID:      ticket.TicketID,
 				CustomerEmail: ticket.CustomerEmail,
@@ -57,7 +57,7 @@ func (h Handler) PostTicketsStatus(c echo.Context) error {
 			}
 
 			if err := h.eventBus.Publish(c.Request().Context(), event); err != nil {
-				return fmt.Errorf("failed to publish TicketBookingCanceled event: %w", err)
+				return fmt.Errorf("failed to publish TicketBookingCanceled_v1 event: %w", err)
 			}
 		} else {
 			return fmt.Errorf("unknown ticket status: %s", ticket.Status)

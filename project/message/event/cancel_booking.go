@@ -6,7 +6,7 @@ import (
 	"tickets/entities"
 )
 
-func (h Handler) CancelBooking(ctx context.Context, event *entities.TicketBookingCanceled) error {
+func (h Handler) CancelBooking(ctx context.Context, event *entities.TicketBookingCanceled_v1) error {
 	if event == nil {
 		return errors.New("empty event received")
 	}

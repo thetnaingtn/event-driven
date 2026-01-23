@@ -9,7 +9,7 @@ import (
 	"tickets/entities"
 )
 
-func (h Handler) BookPlaceInDeadNation(ctx context.Context, event *entities.BookingMade) error {
+func (h Handler) BookPlaceInDeadNation(ctx context.Context, event *entities.BookingMade_v1) error {
 	log.FromContext(ctx).Info("Booking ticket in Dead Nation")
 
 	show, err := h.showsRepository.ShowByID(ctx, event.ShowID)

@@ -28,7 +28,7 @@ func NewMessageHeaderWithIdempotencyKey(idempotencyKey string) MessageHeader {
 	}
 }
 
-type TicketBookingConfirmed struct {
+type TicketBookingConfirmed_v1 struct {
 	Header MessageHeader `json:"header"`
 
 	TicketID      string `json:"ticket_id"`
@@ -37,7 +37,7 @@ type TicketBookingConfirmed struct {
 	BookingID     string `json:"booking_id"`
 }
 
-type TicketBookingCanceled struct {
+type TicketBookingCanceled_v1 struct {
 	Header MessageHeader `json:"header"`
 
 	TicketID      string `json:"ticket_id"`
@@ -45,20 +45,20 @@ type TicketBookingCanceled struct {
 	Price         Money  `json:"price"`
 }
 
-type TicketRefunded struct {
+type TicketRefunded_v1 struct {
 	Header MessageHeader `json:"header"`
 
 	TicketID string `json:"ticket_id"`
 }
 
-type TicketPrinted struct {
+type TicketPrinted_v1 struct {
 	Header MessageHeader `json:"header"`
 
 	TicketID string `json:"ticket_id"`
 	FileName string `json:"file_name"`
 }
 
-type TicketReceiptIssued struct {
+type TicketReceiptIssued_v1 struct {
 	Header MessageHeader `json:"header"`
 
 	TicketID      string `json:"ticket_id"`
@@ -67,7 +67,7 @@ type TicketReceiptIssued struct {
 	IssuedAt time.Time `json:"issued_at"`
 }
 
-type BookingMade struct {
+type BookingMade_v1 struct {
 	Header          MessageHeader `json:"header"`
 	NumberOfTickets int           `json:"number_of_tickets"`
 	BookingID       uuid.UUID     `json:"booking_id"`

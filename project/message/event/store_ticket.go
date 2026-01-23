@@ -8,7 +8,7 @@ import (
 	"tickets/entities"
 )
 
-func (h Handler) StoreTickets(ctx context.Context, event *entities.TicketBookingConfirmed) error {
+func (h Handler) StoreTickets(ctx context.Context, event *entities.TicketBookingConfirmed_v1) error {
 	log.FromContext(ctx).Info("Storing ticket")
 
 	return h.ticketsRepository.Add(ctx, entities.Ticket{

@@ -8,7 +8,7 @@ import (
 	"tickets/entities"
 )
 
-func (h Handler) AppendToTracker(ctx context.Context, event *entities.TicketBookingConfirmed) error {
+func (h Handler) AppendToTracker(ctx context.Context, event *entities.TicketBookingConfirmed_v1) error {
 	log.FromContext(ctx).Info("Appending ticket to the tracker")
 
 	return h.spreadsheetsAPI.AppendRow(
