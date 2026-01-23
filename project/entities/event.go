@@ -74,3 +74,10 @@ type BookingMade struct {
 	CustomerEmail   string        `json:"customer_email"`
 	ShowID          uuid.UUID     `json:"show_id"`
 }
+
+type Event struct {
+	EventName    string    `json:"event_name" db:"event_name"`
+	EventID      string    `json:"event_id" db:"event_id"`
+	EventPayload []byte    `json:"event_payload" db:"event_payload"`
+	PublishedAt  time.Time `json:"published_at" db:"published_at"`
+}

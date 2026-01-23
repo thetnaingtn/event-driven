@@ -10,13 +10,14 @@ import (
 )
 
 type Handler struct {
-	deadNationAPI     DeadNationAPI
-	spreadsheetsAPI   SpreadsheetsAPI
-	receiptsService   ReceiptsService
-	filesAPI          FilesAPI
-	ticketsRepository TicketsRepository
-	showsRepository   ShowsRepository
-	eventBus          *cqrs.EventBus
+	deadNationAPI      DeadNationAPI
+	spreadsheetsAPI    SpreadsheetsAPI
+	receiptsService    ReceiptsService
+	filesAPI           FilesAPI
+	ticketsRepository  TicketsRepository
+	showsRepository    ShowsRepository
+	eventBus           *cqrs.EventBus
+	dataLakeRepository DataLakeRepository
 }
 
 func NewHandler(
@@ -27,6 +28,7 @@ func NewHandler(
 	ticketsRepository TicketsRepository,
 	showsRepository ShowsRepository,
 	eventBus *cqrs.EventBus,
+	dataLakeRepository DataLakeRepository,
 ) Handler {
 	if eventBus == nil {
 		panic("missing eventBus")
@@ -49,18 +51,20 @@ func NewHandler(
 	if showsRepository == nil {
 		panic("missing showsRepository")
 	}
-	if eventBus == nil {
-		panic("missing eventBus")
+
+	if dataLakeRepository == nil {
+		panic("missing dataLakeRepository")
 	}
 
 	return Handler{
-		deadNationAPI:     deadNationAPI,
-		spreadsheetsAPI:   spreadsheetsAPI,
-		receiptsService:   receiptsService,
-		filesAPI:          filesAPI,
-		ticketsRepository: ticketsRepository,
-		showsRepository:   showsRepository,
-		eventBus:          eventBus,
+		deadNationAPI:      deadNationAPI,
+		spreadsheetsAPI:    spreadsheetsAPI,
+		receiptsService:    receiptsService,
+		filesAPI:           filesAPI,
+		ticketsRepository:  ticketsRepository,
+		showsRepository:    showsRepository,
+		eventBus:           eventBus,
+		dataLakeRepository: dataLakeRepository,
 	}
 }
 
@@ -87,4 +91,8 @@ type ShowsRepository interface {
 
 type DeadNationAPI interface {
 	BookInDeadNation(ctx context.Context, request entities.DeadNationBooking) error
+}
+
+type DataLakeRepository interface {
+	Add(ctx context.Context, event entities.Event) error
 }

@@ -43,6 +43,8 @@ func NewWatermillRouter(
 		return redisPublisher.Publish("events."+eventName, msg)
 	})
 
+	router.AddConsumerHandler("events_data_lake", "events", redisSubscriber, eventHandler.AddEventToDataLake)
+
 	eventProcessor.AddHandlers(
 		cqrs.NewEventHandler(
 			"BookPlaceInDeadNation",
