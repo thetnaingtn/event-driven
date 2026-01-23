@@ -37,6 +37,10 @@ type TicketBookingConfirmed_v1 struct {
 	BookingID     string `json:"booking_id"`
 }
 
+func (t TicketBookingConfirmed_v1) IsInternal() bool {
+	return false
+}
+
 type TicketBookingCanceled_v1 struct {
 	Header MessageHeader `json:"header"`
 
@@ -45,10 +49,18 @@ type TicketBookingCanceled_v1 struct {
 	Price         Money  `json:"price"`
 }
 
+func (t TicketBookingCanceled_v1) IsInternal() bool {
+	return false
+}
+
 type TicketRefunded_v1 struct {
 	Header MessageHeader `json:"header"`
 
 	TicketID string `json:"ticket_id"`
+}
+
+func (t TicketRefunded_v1) IsInternal() bool {
+	return false
 }
 
 type TicketPrinted_v1 struct {
@@ -56,6 +68,10 @@ type TicketPrinted_v1 struct {
 
 	TicketID string `json:"ticket_id"`
 	FileName string `json:"file_name"`
+}
+
+func (t TicketPrinted_v1) IsInternal() bool {
+	return false
 }
 
 type TicketReceiptIssued_v1 struct {
@@ -67,6 +83,10 @@ type TicketReceiptIssued_v1 struct {
 	IssuedAt time.Time `json:"issued_at"`
 }
 
+func (t TicketReceiptIssued_v1) IsInternal() bool {
+	return false
+}
+
 type BookingMade_v1 struct {
 	Header          MessageHeader `json:"header"`
 	NumberOfTickets int           `json:"number_of_tickets"`
@@ -75,9 +95,19 @@ type BookingMade_v1 struct {
 	ShowID          uuid.UUID     `json:"show_id"`
 }
 
-type Event struct {
-	EventName    string    `json:"event_name" db:"event_name"`
-	EventID      string    `json:"event_id" db:"event_id"`
-	EventPayload []byte    `json:"event_payload" db:"event_payload"`
-	PublishedAt  time.Time `json:"published_at" db:"published_at"`
+func (b BookingMade_v1) IsInternal() bool {
+	return false
+}
+
+type Event interface {
+	IsInternal() bool
+}
+
+type InternalOpsReadModelUpdated struct {
+	Header    MessageHeader `json:"header"`
+	BookingID uuid.UUID     `json:"booking_id"`
+}
+
+func (i InternalOpsReadModelUpdated) IsInternal() bool {
+	return true
 }

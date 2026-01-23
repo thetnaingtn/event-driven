@@ -9,21 +9,23 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/go-event-driven/v2/common/log"
+	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/jmoiron/sqlx"
 
 	"tickets/entities"
 )
 
 type OpsBookingReadModel struct {
-	db *sqlx.DB
+	db       *sqlx.DB
+	eventBus *cqrs.EventBus
 }
 
-func NewOpsBookingReadModel(db *sqlx.DB) OpsBookingReadModel {
+func NewOpsBookingReadModel(db *sqlx.DB, eventBus *cqrs.EventBus) OpsBookingReadModel {
 	if db == nil {
 		panic("db is nil")
 	}
 
-	return OpsBookingReadModel{db: db}
+	return OpsBookingReadModel{db: db, eventBus: eventBus}
 }
 
 func (r OpsBookingReadModel) OnBookingMade(ctx context.Context, bookingMade *entities.BookingMade_v1) error {
@@ -248,18 +250,20 @@ func (r OpsBookingReadModel) updateReadModel(
 		return err
 	}
 
-	_, err = tx.ExecContext(ctx, `
+	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO 
 			read_model_ops_bookings (payload, booking_id)
 		VALUES
 			($1, $2)
 		ON CONFLICT (booking_id) DO UPDATE SET payload = excluded.payload;
-		`, payload, rm.BookingID)
-	if err != nil {
+		`, payload, rm.BookingID); err != nil {
 		return fmt.Errorf("could not update read model: %w", err)
 	}
 
-	return nil
+	return r.eventBus.Publish(ctx, entities.InternalOpsReadModelUpdated{
+		Header:    entities.NewMessageHeader(),
+		BookingID: rm.BookingID,
+	})
 }
 
 func (r OpsBookingReadModel) findReadModelByTicketID(

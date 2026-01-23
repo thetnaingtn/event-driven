@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"time"
 
 	"github.com/ThreeDotsLabs/watermill/components/cqrs"
 	"github.com/google/uuid"
@@ -94,5 +95,5 @@ type DeadNationAPI interface {
 }
 
 type DataLakeRepository interface {
-	Add(ctx context.Context, event entities.Event) error
+	Add(ctx context.Context, eventName, eventId string, payload []byte, publishedAt time.Time) error
 }

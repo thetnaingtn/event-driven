@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"tickets/entities"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -21,17 +21,20 @@ func NewDataLake(db *sqlx.DB) DataLake {
 	}
 }
 
-func (d DataLake) Add(ctx context.Context, e entities.Event) error {
+func (d DataLake) Add(ctx context.Context, eventName, eventId string, payload []byte, publishedAt time.Time) error {
 	stmt := `
 		INSERT INTO 
 			events (event_id, published_at, event_name, event_payload)
 		VALUES
-			(:event_id, :published_at, :event_name, :event_payload)
+			($1, $2, $3, $4)
 	`
-	_, err := d.db.NamedExecContext(
+	_, err := d.db.ExecContext(
 		ctx,
 		stmt,
-		e,
+		eventId,
+		publishedAt,
+		eventName,
+		payload,
 	)
 
 	if err != nil {

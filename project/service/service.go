@@ -43,18 +43,18 @@ func New(
 	filesAPI event.FilesAPI,
 	paymentsService command.PaymentsService,
 ) Service {
-	ticketsRepo := db.NewTicketsRepository(dbConn)
-	OpsBookingReadModel := db.NewOpsBookingReadModel(dbConn)
-	showsRepo := db.NewShowsRepository(dbConn)
-	bookingsRepository := db.NewBookingsRepository(dbConn)
-	dataLakeRepository := db.NewDataLake(dbConn)
-
 	watermillLogger := watermill.NewSlogLogger(log.FromContext(context.Background()))
 
 	redisPublisher := message.NewRedisPublisher(redisClient, watermillLogger)
 	redisSubscriber := message.NewRedisSubscriber(redisClient, watermillLogger)
 
 	eventBus := event.NewBus(redisPublisher)
+
+	ticketsRepo := db.NewTicketsRepository(dbConn)
+	OpsBookingReadModel := db.NewOpsBookingReadModel(dbConn, eventBus)
+	showsRepo := db.NewShowsRepository(dbConn)
+	bookingsRepository := db.NewBookingsRepository(dbConn)
+	dataLakeRepository := db.NewDataLake(dbConn)
 
 	eventsHandler := event.NewHandler(
 		deadNationAPI,
