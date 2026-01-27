@@ -18,5 +18,10 @@ func (h Handler) AddEventToDataLake(msg *message.Message) error {
 		return err
 	}
 
-	return h.dataLakeRepository.Add(msg.Context(), marshaler.NameFromMessage(msg), event.Header.ID, msg.Payload, event.Header.PublishedAt)
+	return h.dataLakeRepository.Add(msg.Context(), entities.DataLakeEvent{
+		EventID:      event.Header.ID,
+		EventName:    marshaler.NameFromMessage(msg),
+		EventPayload: msg.Payload,
+		PublishedAt:  event.Header.PublishedAt,
+	})
 }

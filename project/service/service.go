@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	stdHTTP "net/http"
+	"time"
 
 	"github.com/ThreeDotsLabs/go-event-driven/v2/common/log"
 	"github.com/ThreeDotsLabs/watermill"
@@ -21,12 +23,15 @@ import (
 	"tickets/message/command"
 	"tickets/message/event"
 	"tickets/message/outbox"
+	"tickets/migrations"
 )
 
 type Service struct {
-	db              *sqlx.DB
-	watermillRouter *watermillMessage.Router
-	echoRouter      *echo.Echo
+	db                 *sqlx.DB
+	watermillRouter    *watermillMessage.Router
+	echoRouter         *echo.Echo
+	dataLakeRepository db.DataLake
+	readModel          db.OpsBookingReadModel
 }
 
 type ReceiptService interface {
@@ -104,6 +109,8 @@ func New(
 		dbConn,
 		watermillRouter,
 		echoRouter,
+		dataLakeRepository,
+		OpsBookingReadModel,
 	}
 }
 
@@ -134,6 +141,35 @@ func (s Service) Run(ctx context.Context) error {
 	errgrp.Go(func() error {
 		<-ctx.Done()
 		return s.echoRouter.Shutdown(context.Background())
+	})
+
+	errgrp.Go(func() error {
+		for {
+			events, err := s.dataLakeRepository.GetEvents(ctx)
+			if err != nil && !errors.Is(sql.ErrNoRows, err) {
+				return err
+			}
+
+			if len(events) > 0 {
+				for _, event := range events {
+					if err := migrations.MigrateEvent(ctx, event, s.readModel); err != nil {
+						return err
+					}
+				}
+
+				return nil
+			}
+
+			t := time.NewTimer(time.Millisecond * 500)
+
+			select {
+			case <-ctx.Done():
+				t.Stop()
+				return errors.New("canceled")
+			case <-t.C:
+				fmt.Println("retry event migration")
+			}
+		}
 	})
 
 	return errgrp.Wait()

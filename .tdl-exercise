@@ -1,4 +1,4 @@
-exercise_id = "09f984d3-89da-456e-9722-fc95ae69d13b"
-directory = "project"
-is_text_only = false
+exercise_id = "444f0002-3653-44d0-b822-341f44c86660"
+directory = "18-metrics-and-alerting/01-observability"
+is_text_only = true
 is_optional = true
